@@ -21,3 +21,14 @@
 
 DATA_STORE_ID = "zenodo"
 API_RECORDS_ENDPOINT = "https://zenodo.org/api/records"
+
+MAP_FILE_EXTENSION_FORMAT = {
+    "zarr": "zarr",
+    "levels": "levels",
+    "nc": "netcdf",
+    "tif": "geotiff",
+    "tiff": "geotiff",
+    "geotiff": "geotiff",
+    "shp": "shapefile",
+    "geojson": "geojson",
+}

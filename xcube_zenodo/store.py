@@ -22,6 +22,7 @@
 import logging
 from typing import Tuple, Iterator, Container, Any, Union
 
+import numpy as np
 import requests
 import xarray as xr
 from xcube.util.jsonschema import (
@@ -29,13 +30,18 @@ from xcube.util.jsonschema import (
     JsonStringSchema,
 )
 from xcube.core.store import (
-    DATASET_TYPE,
     DataDescriptor,
     DataStore,
     DataTypeLike,
+    new_data_store,
 )
 
 from .constants import API_RECORDS_ENDPOINT
+from ._utils import get_attrs_from_record
+from ._utils import is_valid_data_type
+from ._utils import is_supported_file_format
+from ._utils import estimate_file_format
+from ._utils import translate_data_id2uri
 
 
 _LOG = logging.getLogger("xcube")
@@ -46,7 +52,8 @@ class ZenodoDataStore(DataStore):
     plugin."""
 
     def __init__(self, access_token: str):
-        self._access_token = access_token
+        self._requests_params = {"access_token": access_token}
+        self._https_data_store = new_data_store("https", root="zenodo.org")
 
     @classmethod
     def get_data_store_params_schema(cls) -> JsonObjectSchema:
@@ -63,49 +70,78 @@ class ZenodoDataStore(DataStore):
 
     @classmethod
     def get_data_types(cls) -> Tuple[str, ...]:
-        return (DATASET_TYPE.alias,)
+        store = new_data_store("https", root="zenodo.org")
+        return store.get_data_types()
 
     def get_data_types_for_data(self, data_id: str) -> Tuple[str, ...]:
-        return self.get_data_types()
+        uri = translate_data_id2uri(data_id)
+        return self._https_data_store.get_data_types_for_data(uri)
 
     def get_data_ids(
         self, data_type: DataTypeLike = None, include_attrs: Container[str] = None
     ) -> Union[Iterator[str], Iterator[tuple[str, dict[str, Any]]]]:
-        params = {"access_token": self._access_token}
+        params = self._requests_params
         page = 1
         while True:
             params["page"] = page
             response = requests.get(API_RECORDS_ENDPOINT, params=params)
             response.raise_for_status()
             data = response.json()
-            for item in data["hits"]:
-                yield item["id"]
-            if "next" not in data:
+            for record in data["hits"]["hits"]:
+                if not record["files"]:
+                    continue
+                for file in record["files"]:
+                    data_id = f"{record["id"]}/{file["key"]}"
+                    if not is_supported_file_format(data_id):
+                        continue
+                    if include_attrs is None:
+                        yield data_id
+                    else:
+                        attrs = get_attrs_from_record(record, file, include_attrs)
+                        yield data_id, attrs
+            if "next" not in data["links"]:
                 break
             page += 1
 
     def has_data(self, data_id: str, data_type: str = None) -> bool:
-        raise NotImplementedError
+        uri = translate_data_id2uri(data_id)
+        return self._https_data_store.has_data(data_id=uri, data_type=data_type)
 
     def describe_data(
         self, data_id: str, data_type: DataTypeLike = None
     ) -> DataDescriptor:
-        raise NotImplementedError
+        uri = translate_data_id2uri(data_id)
+        return self._https_data_store.describe_data(data_id=uri, data_type=data_type)
 
     def get_data_opener_ids(
         self, data_id: str = None, data_type: DataTypeLike = None
     ) -> Tuple[str, ...]:
-        raise NotImplementedError
+        if data_id is not None:
+            uri = translate_data_id2uri(data_id)
+        else:
+            uri = data_id
+        return self._https_data_store.get_data_opener_ids(
+            data_id=uri, data_type=data_type
+        )
 
     def get_open_data_params_schema(
         self, data_id: str = None, opener_id: str = None
     ) -> JsonObjectSchema:
-        raise NotImplementedError
+        if data_id is not None:
+            uri = translate_data_id2uri(data_id)
+        else:
+            uri = data_id
+        return self._https_data_store.get_open_data_params_schema(
+            data_id=uri, opener_id=opener_id
+        )
 
     def open_data(
         self, data_id: str, opener_id: str = None, **open_params
     ) -> xr.Dataset:
-        return NotImplementedError
+        uri = translate_data_id2uri(data_id)
+        return self._https_data_store.open_data(
+            data_id=uri, opener_id=opener_id, **open_params
+        )
 
     def search_data(
         self, data_type: DataTypeLike = None, **search_params
