@@ -22,7 +22,6 @@
 import logging
 from typing import Tuple, Iterator, Container, Any, Union
 
-import numpy as np
 import requests
 import xarray as xr
 from xcube.util.jsonschema import (
@@ -38,9 +37,7 @@ from xcube.core.store import (
 
 from .constants import API_RECORDS_ENDPOINT
 from ._utils import get_attrs_from_record
-from ._utils import is_valid_data_type
 from ._utils import is_supported_file_format
-from ._utils import estimate_file_format
 from ._utils import translate_data_id2uri
 
 
@@ -85,6 +82,9 @@ class ZenodoDataStore(DataStore):
         while True:
             params["page"] = page
             response = requests.get(API_RECORDS_ENDPOINT, params=params)
+            if response.status_code == 500:
+                page += 1
+                continue
             response.raise_for_status()
             data = response.json()
             for record in data["hits"]["hits"]:
@@ -111,7 +111,11 @@ class ZenodoDataStore(DataStore):
         self, data_id: str, data_type: DataTypeLike = None
     ) -> DataDescriptor:
         uri = translate_data_id2uri(data_id)
-        return self._https_data_store.describe_data(data_id=uri, data_type=data_type)
+        descriptor = self._https_data_store.describe_data(
+            data_id=uri, data_type=data_type
+        )
+        descriptor.data_id = data_id
+        return descriptor
 
     def get_data_opener_ids(
         self, data_id: str = None, data_type: DataTypeLike = None
@@ -146,10 +150,16 @@ class ZenodoDataStore(DataStore):
     def search_data(
         self, data_type: DataTypeLike = None, **search_params
     ) -> Iterator[DataDescriptor]:
-        raise NotImplementedError
+        schema = self.get_search_params_schema()
+        schema.validate_instance(search_params)
+        raise NotImplementedError("search_data() operation is not supported.")
 
     @classmethod
     def get_search_params_schema(
         cls, data_type: DataTypeLike = None
     ) -> JsonObjectSchema:
-        pass
+        return JsonObjectSchema(
+            properties={},
+            required=[],
+            additional_properties=False,
+        )

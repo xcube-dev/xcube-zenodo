@@ -1,7 +1,7 @@
 # xcube-zenodo
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![License](https://img.shields.io/github/license/dcs4cop/xcube-smos)](https://github.com/xcube-dev/xcube-stac/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/dcs4cop/xcube-smos)](https://github.com/xcube-dev/xcube-zenodo/blob/main/LICENSE)
 
 `xcube-zenodo` is a Python package and
 [xcube plugin](https://xcube.readthedocs.io/en/latest/plugins.html) that adds a

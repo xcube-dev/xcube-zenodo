@@ -23,7 +23,6 @@ from typing import Any, Container
 
 from xcube.core.store import DATASET_TYPE
 from xcube.core.store import MULTI_LEVEL_DATASET_TYPE
-from xcube.core.store import DataStoreError
 from xcube.core.store import DataTypeLike
 
 
@@ -33,21 +32,6 @@ from .constants import MAP_FILE_EXTENSION_FORMAT
 def get_attrs_from_record(
     record: dict, zenodo_file: dict, include_attrs: Container[str]
 ) -> dict[str, Any]:
-    """Extracts the desired attributes from a Zenodo record object.
-
-    Args:
-        record: dict containing meta-data zenodo record.
-        zenodo_file: entry representing one file in a record.
-        include_attrs: A sequence of names of attributes to be returned
-            for each dataset identifier. If given, the store will attempt
-            to provide the set of requested dataset attributes in addition
-            to the data ids. If no attributes are found, empty dictionary
-            is returned.
-
-    Returns:
-        dictionary containing the attributes defined by *include_attrs*
-        of data resources provided by this data store
-    """
     attrs = {}
     supported_record_keys = [
         "created",
@@ -84,35 +68,6 @@ def get_attrs_from_record(
         if key in include_attrs and key_mod in zenodo_file:
             attrs[key] = zenodo_file[key_mod]
     return attrs
-
-
-def is_valid_data_type(data_type: DataTypeLike) -> bool:
-    """Auxiliary function to check if data type is supported
-    by the store.
-
-    Args:
-        data_type: Data type that is to be checked.
-
-    Returns:
-        True if *data_type* is supported by the store, otherwise False
-    """
-    return (
-        data_type is None
-        or DATASET_TYPE.is_super_type_of(data_type)
-        or MULTI_LEVEL_DATASET_TYPE.is_super_type_of(data_type)
-    )
-
-
-def is_valid_dataset_type(data_type: DataTypeLike) -> bool:
-    """Auxiliary function to check if data type is a valid dataset type.
-
-    Args:
-        data_type: Data type that is to be checked.
-
-    Returns:
-        True if *data_type* is a valid dataset type, otherwise False
-    """
-    return data_type is None or DATASET_TYPE.is_super_type_of(data_type)
 
 
 def estimate_file_format(data_id: str) -> str:

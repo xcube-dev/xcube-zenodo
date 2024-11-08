@@ -21,8 +21,10 @@
 
 import itertools
 import unittest
+from unittest.mock import patch
+from unittest.mock import Mock
 
-import pytest
+import numpy as np
 import xarray as xr
 from xcube.core.store import new_data_store
 from xcube.core.store import get_data_store_params_schema
@@ -32,22 +34,17 @@ from xcube.util.jsonschema import JsonObjectSchema
 from xcube_zenodo.constants import DATA_STORE_ID
 
 
-ZENODO_ACCESS_TOKEN = "ZsZVfyPCmLYRZQtfSYWruNwXYBykonv0pXZYnrQYNNL0gGMJipYsx0CYvOSB"
-
-
-@pytest.fixture(scope="module")
-def vcr_config():
-    return {
-        "filter_headers": ["authorization"],
-        "ignore_localhost": True,
-        "record_mode": "once",
-    }
-
-
-class StacDataStoreTest(unittest.TestCase):
+class ZenodoDataStoreTest(unittest.TestCase):
 
     def setUp(self):
-        self.data_id_tif = "8154445/planet_agb_30m_v0.1.tif"
+        self.data_id_tif = "1000000/test.tif"
+        self.mock_dataset = xr.Dataset(
+            {
+                "temperature": (("time", "x", "y"), np.random.rand(5, 5, 5)),
+                "precipitation": (("time", "x", "y"), np.random.rand(5, 5, 5)),
+            }
+        )
+        self.access_token = "xxx"
 
     def test_get_data_store_params_schema(self):
         schema = get_data_store_params_schema(DATA_STORE_ID)
@@ -57,161 +54,126 @@ class StacDataStoreTest(unittest.TestCase):
         self.assertNotIn("url", schema.properties)
 
     def test_get_data_types(self):
-        store = new_data_store(DATA_STORE_ID, access_token=ZENODO_ACCESS_TOKEN)
+        store = new_data_store(DATA_STORE_ID, access_token=self.access_token)
         self.assertCountEqual(
             ("dataset", "mldataset", "geodataframe"), store.get_data_types()
         )
 
-    def test_get_data_types_for_data(self):
-        store = new_data_store(DATA_STORE_ID, access_token=ZENODO_ACCESS_TOKEN)
+    @patch("xcube.core.store.fs.store.BaseFsDataStore.get_data_types_for_data")
+    def test_get_data_types_for_data(self, mock_get_data_types):
+        mock_get_data_types.return_value = ("dataset", "mldataset")
+        store = new_data_store(DATA_STORE_ID, access_token=self.access_token)
         self.assertCountEqual(
             ("dataset", "mldataset"),
-            store.get_data_types_for_data(data_id=self.data_id_tif),
+            store.get_data_types_for_data(self.data_id_tif),
         )
+        mock_get_data_types.assert_called_once_with("records/1000000/files/test.tif")
 
-    # @pytest.mark.vcr
-    def test_get_data_ids(self):
-        store = new_data_store(DATA_STORE_ID, access_token=ZENODO_ACCESS_TOKEN)
+    @patch("xcube_zenodo.store.requests.get")
+    def test_get_data_ids(self, mock_get):
+        mock_response_1 = Mock()
+        mock_response_1.status_code = 500
+
+        mock_response_2 = Mock()
+        mock_response_2.status_code = 200
+        mock_response_2.json.return_value = {
+            "hits": {"hits": [{"id": 10000000, "title": "test_title", "files": []}]},
+            "links": {"next": "link_to_next_page"},
+        }
+        mock_response_2.raise_for_status.return_value = None
+
+        mock_response_3 = Mock()
+        mock_response_3.status_code = 200
+        mock_response_3.json.return_value = {
+            "hits": {
+                "hits": [
+                    {
+                        "id": 10000000,
+                        "title": "test_title",
+                        "files": [{"key": "test.pdf"}],
+                    }
+                ]
+            },
+            "links": {"next": "link_to_next_page"},
+        }
+        mock_response_3.raise_for_status.return_value = None
+
+        mock_response_4 = Mock()
+        mock_response_4.status_code = 200
+        mock_response_4.raise_for_status.return_value = None
+        mock_response_4.json.return_value = {
+            "hits": {
+                "hits": [
+                    {
+                        "id": 10000000,
+                        "title": "test_title",
+                        "files": [
+                            {
+                                "key": "test.tif",
+                                "size": 1000,
+                                "links": {"self": "https://zenodo.org/test.tif"},
+                            }
+                        ],
+                    }
+                ]
+            },
+            "links": {},
+        }
+        mock_get.side_effect = [
+            mock_response_1,
+            mock_response_2,
+            mock_response_3,
+            mock_response_4,
+        ]
+
+        store = new_data_store(DATA_STORE_ID, access_token=self.access_token)
         include_attrs = ["title", "file_key", "file_size", "file_links"]
         data_ids = store.get_data_ids(include_attrs=include_attrs)
-        data_ids = list(itertools.islice(data_ids, 1))
+        data_ids = list(data_ids)
         expected_data_id = (
-            (
-                "14039675/ta_200hPa_6hrPlevPt_UKESM1-0-LL_ssp585"
-                "_r1i1p1f1_207001-209912_djf.nc"
-            ),
+            "10000000/test.tif",
             {
-                "title": (
-                    'Data to support "Reduced winter-time Clear Air Turbulence in the '
-                    "trans-Atlantic region under Stratospheric Aerosol Injection by "
-                    "Katie L Barnes, Anthony C Jones, Paul D Williams and James M "
-                    "Haywood, Submitted to Geophysical Research Letters, "
-                    'November 2024"'
-                ),
-                "file_key": (
-                    "ta_200hPa_6hrPlevPt_UKESM1-0-LL_ssp585_r1i1p1f1_"
-                    "207001-209912_djf.nc"
-                ),
-                "file_size": 1202882929,
-                "file_links": {
-                    "self": (
-                        "https://zenodo.org/api/records/14039675/files/ta_200hPa_6hrPl"
-                        "evPt_UKESM1-0-LL_ssp585_r1i1p1f1_207001-209912_djf.nc/content"
-                    )
-                },
+                "title": "test_title",
+                "file_key": "test.tif",
+                "file_size": 1000,
+                "file_links": {"self": "https://zenodo.org/test.tif"},
             },
         )
         self.assertEqual(expected_data_id, data_ids[0])
+        self.assertEqual(4, mock_get.call_count)
 
-    def test_has_data(self):
-        store = new_data_store(DATA_STORE_ID, access_token=ZENODO_ACCESS_TOKEN)
+        # test without attributes
+        mock_get.reset_mock()
+        mock_get.side_effect = [mock_response_4]
+        data_ids = store.get_data_ids()
+        data_ids = list(data_ids)
+        self.assertEqual("10000000/test.tif", data_ids[0])
+        self.assertEqual(1, mock_get.call_count)
+
+    @patch("xcube.core.store.fs.store.BaseFsDataStore.has_data")
+    def test_has_data(self, mock_has_data):
+        mock_has_data.return_value = True
+
+        store = new_data_store(DATA_STORE_ID, access_token=self.access_token)
         self.assertTrue(store.has_data(self.data_id_tif))
-        self.assertTrue(store.has_data(self.data_id_tif, data_type="dataset"))
-        self.assertTrue(store.has_data(self.data_id_tif, data_type="mldataset"))
-        self.assertFalse(store.has_data(self.data_id_tif, data_type="geodataframe"))
-        self.assertFalse(store.has_data("8154445/non_existent_filename.tif"))
-        self.assertFalse(store.has_data("wrong_record_id/planet_agb_30m_v0.1.tif"))
-        self.assertFalse(store.has_data("wrong_record_id/planet_agb_30m_v0.1.tif"))
+        mock_has_data.assert_called_once_with(
+            data_id="records/1000000/files/test.tif", data_type=None
+        )
 
-    def test_describe_data(self):
-        store = new_data_store(DATA_STORE_ID, access_token=ZENODO_ACCESS_TOKEN)
+    @patch("xcube.core.store.fs.store.BaseFsDataStore.describe_data")
+    def test_describe_data(self, mock_describe_data):
+        mock_describe_data.return_value = DatasetDescriptor(data_id=self.data_id_tif)
+        store = new_data_store(DATA_STORE_ID, access_token=self.access_token)
         descriptor = store.describe_data(self.data_id_tif)
-        expected_descriptor = {
-            "data_id": "records/8154445/files/planet_agb_30m_v0.1.tif",
-            "data_type": "dataset",
-            "bbox": [
-                2554652.2042793306,
-                1338813.6609999156,
-                7666562.204279331,
-                5819703.660999916,
-            ],
-            "time_range": (None, None),
-            "dims": {"x": 170397, "y": 149363},
-            "spatial_res": 30.0,
-            "coords": {
-                "x": {"name": "x", "dtype": "float64", "dims": ["x"]},
-                "y": {"name": "y", "dtype": "float64", "dims": ["y"]},
-                "spatial_ref": {
-                    "name": "spatial_ref",
-                    "dtype": "int64",
-                    "dims": [],
-                    "attrs": {
-                        "crs_wkt": (
-                            'PROJCS["ETRS89-extended / LAEA Europe",GEOGCS["ETRS89",'
-                            'DATUM["European_Terrestrial_Reference_System_1989",'
-                            'SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY'
-                            '["EPSG","7019"]],AUTHORITY["EPSG","6258"]],PRIMEM'
-                            '["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",'
-                            '0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY'
-                            '["EPSG","4258"]],PROJECTION["Lambert_Azimuthal_Equal_Area'
-                            '"],PARAMETER["latitude_of_center",52],PARAMETER["longitude'
-                            '_of_center",10],PARAMETER["false_easting",4321000],'
-                            'PARAMETER["false_northing",3210000],UNIT["metre",1,'
-                            'AUTHORITY["EPSG","9001"]],AXIS["Northing",NORTH],AXIS['
-                            '"Easting",EAST],AUTHORITY["EPSG","3035"]]'
-                        ),
-                        "semi_major_axis": 6378137.0,
-                        "semi_minor_axis": 6356752.314140356,
-                        "inverse_flattening": 298.257222101,
-                        "reference_ellipsoid_name": "GRS 1980",
-                        "longitude_of_prime_meridian": 0.0,
-                        "prime_meridian_name": "Greenwich",
-                        "geographic_crs_name": "ETRS89",
-                        "horizontal_datum_name": (
-                            "European Terrestrial Reference System 1989"
-                        ),
-                        "projected_crs_name": "ETRS89-extended / LAEA Europe",
-                        "grid_mapping_name": "lambert_azimuthal_equal_area",
-                        "latitude_of_projection_origin": 52.0,
-                        "longitude_of_projection_origin": 10.0,
-                        "false_easting": 4321000.0,
-                        "false_northing": 3210000.0,
-                        "spatial_ref": (
-                            'PROJCS["ETRS89-extended / LAEA Europe",GEOGCS["ETRS89",DAT'
-                            'UM["European_Terrestrial_Reference_System_1989",SPHEROID['
-                            '"GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]]'
-                            ',AUTHORITY["EPSG","6258"]],PRIMEM["Greenwich",0,AUTHORITY'
-                            '["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORI'
-                            'TY["EPSG","9122"]],AUTHORITY["EPSG","4258"]],PROJECTION'
-                            '["Lambert_Azimuthal_Equal_Area"],PARAMETER["latitude_of_'
-                            'center",52],PARAMETER["longitude_of_center",10],PARAMETER['
-                            '"false_easting",4321000],PARAMETER["false_northing",3210'
-                            '000],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["North'
-                            'ing",NORTH],AXIS["Easting",EAST],AUTHORITY["EPSG","3035"]]'
-                        ),
-                        "GeoTransform": (
-                            "2554652.2042793306 30.0 0.0 5819703.660999916 0.0 -30.0"
-                        ),
-                    },
-                },
-            },
-            "data_vars": {
-                "band_1": {
-                    "name": "band_1",
-                    "dtype": "uint16",
-                    "dims": ["y", "x"],
-                    "chunks": [512, 512],
-                    "attrs": {
-                        "AREA_OR_POINT": "Area",
-                        "_FillValue": 0,
-                        "scale_factor": 1.0,
-                        "add_offset": 0.0,
-                        "grid_mapping": "spatial_ref",
-                    },
-                }
-            },
-            "attrs": {
-                "source": (
-                    "https://zenodo.org/records/8154445/files/planet_agb_30m_v0.1.tif"
-                )
-            },
-        }
-
+        expected_descriptor = {"data_id": self.data_id_tif, "data_type": "dataset"}
         self.assertIsInstance(descriptor, DatasetDescriptor)
         self.assertDictEqual(expected_descriptor, descriptor.to_dict())
+        mock_describe_data.assert_called_once_with(
+            data_id="records/1000000/files/test.tif", data_type=None
+        )
 
     def test_get_data_opener_ids(self):
-        store = new_data_store(DATA_STORE_ID, access_token=ZENODO_ACCESS_TOKEN)
+        store = new_data_store(DATA_STORE_ID, access_token=self.access_token)
         self.assertCountEqual(
             (
                 "dataset:netcdf:https",
@@ -239,7 +201,7 @@ class StacDataStoreTest(unittest.TestCase):
         )
 
     def test_get_open_data_params_schema(self):
-        store = new_data_store(DATA_STORE_ID, access_token=ZENODO_ACCESS_TOKEN)
+        store = new_data_store(DATA_STORE_ID, access_token=self.access_token)
         schema = store.get_open_data_params_schema()
         self.assertIsInstance(schema, JsonObjectSchema)
         self.assertIn("log_access", schema.properties)
@@ -260,12 +222,24 @@ class StacDataStoreTest(unittest.TestCase):
         )
         self.assertIn("tile_size", schema.properties)
 
-    def test_open_data(self):
-        store = new_data_store(DATA_STORE_ID, access_token=ZENODO_ACCESS_TOKEN)
+    @patch("xcube.core.store.fs.store.BaseFsDataStore.open_data")
+    def test_open_data(self, mock_open_data):
+        mock_open_data.return_value = self.mock_dataset
+        store = new_data_store(DATA_STORE_ID, access_token=self.access_token)
+
         ds = store.open_data(data_id=self.data_id_tif)
         self.assertIsInstance(ds, xr.Dataset)
-        self.assertCountEqual(["band_1"], list(ds.data_vars))
-        self.assertCountEqual([170397, 149363], [ds.sizes["y"], ds.sizes["x"]])
-        self.assertCountEqual(
-            [512, 512], [ds.chunksizes["y"][0], ds.chunksizes["x"][0]]
+        self.assertCountEqual(["temperature", "precipitation"], list(ds.data_vars))
+        self.assertEqual(ds["temperature"].shape, (5, 5, 5))
+        self.assertEqual(ds["precipitation"].shape, (5, 5, 5))
+        mock_open_data.assert_called_once_with(
+            data_id="records/1000000/files/test.tif", opener_id=None
+        )
+
+    def test_search_data(self):
+        store = new_data_store(DATA_STORE_ID, access_token=self.access_token)
+        with self.assertRaises(NotImplementedError) as context:
+            store.search_data()
+        self.assertEqual(
+            str(context.exception), "search_data() operation is not supported."
         )
