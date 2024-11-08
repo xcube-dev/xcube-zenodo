@@ -12,5 +12,44 @@ named `zenodo` to xcube. The data store is used to access datasets which are pub
 on [Zenodo](https://zenodo.org/).
 
 
-## Create Access Token
-Create an access token for the Zenodo API [here](https://zenodo.org/login/?next=%2Faccount%2Fsettings%2Fapplications%2Ftokens%2Fnew%2F).
+## Setup <a name="setup"></a>
+
+### Installing the xcube-zenodo plugin from the repository <a name="install_source"></a>
+
+To install xcube-zenodo directly from the git repository, clone the repository,
+direct into `xcube-zenodo`, and follow the steps below:
+
+```bash
+conda env create -f environment.yml
+conda activate xcube-stac
+pip install .
+```
+
+This installs all the dependencies of `xcube-zenodo` into a fresh conda
+environment, and installs xcube-zenodo into this environment from the
+repository.
+
+### Create Access Token
+Create an access token for the Zenodo API following the [zenodo documentation](https://zenodo.org/login/?next=%2Faccount%2Fsettings%2Fapplications%2Ftokens%2Fnew%2F).
+This access code will be required when initializing the zenodo data store.
+
+## Testing <a name="testing"></a>
+
+To run the unit test suite:
+
+```bash
+pytest
+```
+
+To analyze test coverage:
+
+```bash
+pytest --cov=xcube_stac
+```
+
+To produce an HTML
+[coverage report](https://pytest-cov.readthedocs.io/en/latest/reporting.html):
+
+```bash
+pytest --cov-report html --cov=xcube_stac
+```
