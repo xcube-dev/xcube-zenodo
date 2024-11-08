@@ -21,7 +21,7 @@ direct into `xcube-zenodo`, and follow the steps below:
 
 ```bash
 conda env create -f environment.yml
-conda activate xcube-stac
+conda activate xcube-zenodo
 pip install .
 ```
 
@@ -44,12 +44,12 @@ pytest
 To analyze test coverage:
 
 ```bash
-pytest --cov=xcube_stac
+pytest --cov=xcube_zenodo
 ```
 
 To produce an HTML
 [coverage report](https://pytest-cov.readthedocs.io/en/latest/reporting.html):
 
 ```bash
-pytest --cov-report html --cov=xcube_stac
+pytest --cov-report html --cov=xcube_zenodo
 ```
