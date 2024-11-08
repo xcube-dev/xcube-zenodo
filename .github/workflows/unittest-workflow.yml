@@ -1,0 +1,39 @@
+name: Unittest xcube-zenodo
+
+on:
+  push:
+  release:
+    types: [published]
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout xcube
+        uses: actions/checkout@v4
+        with:
+          repository: xcube-dev/xcube
+          path: xcube
+
+      - name: checkout xcube-zenodo
+        uses: actions/checkout@v4
+        with:
+          path: xcube-zenodo
+
+      - name: Set up MicroMamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: xcube-zenodo/environment.yml
+
+      - name: Run unit tests
+        shell: bash -l {0}
+        run: |
+          cd /home/runner/work/xcube-zenodo/xcube-zenodo/xcube-zenodo
+          ls
+          pytest --cov=xcube_zenodo --cov-report=xml
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
