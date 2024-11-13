@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xcube_zenodo"
+dynamic = ["version"]
+authors = [
+  {name = "Konstantin Ntokas", email = "konstantin.ntokas@brockmann-consult.de"}
+]
+description = """\
+  xcube datastore for accessing datasets from Zenodo.org\
+  """
+keywords = [
+  "analysis ready data", "data science", "datacube", "xarray", "zarr", "xcube", "zenodo"
+]
+readme = {file = "README.md", content-type = "text/markdown"}
+license = {text = "MIT"}
+requires-python = ">=3.10"
+dependencies = [
+  "requests",
+  "xarray",
+  "xcube"
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "xcube_zenodo.__version__"}
+
+[tool.setuptools.packages.find]
+exclude = [
+  "test*",
+  "doc*"
+]
+
+[project.optional-dependencies]
+dev = [
+  "black",
+  "flake8",
+  "pytest",
+  "pytest-cov",
+]
+
+[project.urls]
+Repository = 'https://github.com/xcube-dev/xcube-zenodo'
+Issues = 'https://github.com/xcube-dev/xcube-zenodo/issues'
+Changelog = 'https://github.com/xcube-dev/xcube-zenodo/blob/main/CHANGES.md'

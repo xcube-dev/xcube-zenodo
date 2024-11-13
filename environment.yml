@@ -1,0 +1,14 @@
+name: xcube-zenodo
+channels:
+  - conda-forge
+dependencies:
+  # Required
+  - python>=3.10
+  - requests
+  - xarray
+  - xcube >= 1.7.0
+  # for testing
+  - black
+  - flake8
+  - pytest
+  - pytest-cov
