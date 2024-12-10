@@ -21,6 +21,7 @@
 
 DATA_STORE_ID = "zenodo"
 API_RECORDS_ENDPOINT = "https://zenodo.org/api/records"
+PRELOAD_CACHE_FOLDER = "preload_cache/"
 
 MAP_FILE_EXTENSION_FORMAT = {
     "zarr": "zarr",
@@ -31,4 +32,8 @@ MAP_FILE_EXTENSION_FORMAT = {
     "geotiff": "geotiff",
     "shp": "shapefile",
     "geojson": "geojson",
+    "zip": "zip",
+    "tar": "tar",
+    "tar.gz": "tar.gz",
 }
+COMPRESSED_FORMATS = list(MAP_FILE_EXTENSION_FORMAT.keys())[-3:]
