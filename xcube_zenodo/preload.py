@@ -37,7 +37,7 @@ import xarray as xr
 from xcube.core.store import DataStoreError
 from xcube.core.store import MutableDataStore
 
-from ._utils import estimate_file_format
+from ._utils import identify_file_format
 from ._utils import translate_data_id2uri
 
 LOG = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ class Event:
         self.data_id = data_id
         self.status = "Not started"
         self.progress = 0.0
-        self.message = "Preloading not started jet."
+        self.message = "Preloading not started yet."
         self.total_size = total_size
         self._callback = None
 
@@ -114,7 +114,7 @@ class PreloadHandle:
                     self._cache_store.delete_data(event.data_id)
                 else:
                     record, filename = event.data_id.split("/")
-                    format_id = estimate_file_format(event.data_id)
+                    format_id = identify_file_format(event.data_id)
                     dirname = filename.replace(f".{format_id}", "")
                     data_id_mod = f"{record}/{dirname}"
                     list_data_ids = self._cache_store.list_data_ids()
@@ -247,7 +247,7 @@ class PreloadHandle:
                     time.sleep(1)
                 self._events[i].update("File processing started", np.nan, "")
                 record, filename = data_id.split("/")
-                format_id = estimate_file_format(data_id)
+                format_id = identify_file_format(data_id)
                 dirname = filename.replace(f".{format_id}", "")
                 extract_dir = os.path.join(self._download_folder, record, dirname)
                 dss = []

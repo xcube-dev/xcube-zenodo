@@ -66,7 +66,7 @@ def get_attrs_from_record(
     return attrs
 
 
-def estimate_file_format(data_id: str) -> Union[str, None]:
+def identify_file_format(data_id: str) -> Union[str, None]:
     for key, val in MAP_FILE_EXTENSION_FORMAT.items():
         if data_id.endswith(key.lower()):
             return val
@@ -74,11 +74,11 @@ def estimate_file_format(data_id: str) -> Union[str, None]:
 
 
 def is_supported_file_format(data_id: str) -> bool:
-    return estimate_file_format(data_id) is not None
+    return identify_file_format(data_id) is not None
 
 
 def is_supported_compressed_file_format(data_id: str) -> bool:
-    return estimate_file_format(data_id) in COMPRESSED_FORMATS
+    return identify_file_format(data_id) in COMPRESSED_FORMATS
 
 
 def translate_data_id2fs_path(data_id: str) -> str:

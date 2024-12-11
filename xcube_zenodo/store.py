@@ -42,7 +42,7 @@ from .constants import API_RECORDS_ENDPOINT
 from .constants import COMPRESSED_FORMATS
 from .constants import PRELOAD_CACHE_FOLDER
 from .preload import PreloadHandle
-from ._utils import estimate_file_format
+from ._utils import identify_file_format
 from ._utils import get_attrs_from_record
 from ._utils import is_supported_file_format
 from ._utils import is_supported_compressed_file_format
@@ -161,7 +161,7 @@ class ZenodoDataStore(DataStore):
     def open_data(
         self, data_id: str, opener_id: str = None, **open_params
     ) -> xr.Dataset:
-        format_id = estimate_file_format(data_id)
+        format_id = identify_file_format(data_id)
         if format_id in COMPRESSED_FORMATS:
             if not self.cache_store.has_data(data_id):
                 raise DataStoreError(
@@ -186,7 +186,7 @@ class ZenodoDataStore(DataStore):
         preload_params["monitor_preload"] = preload_params.get("monitor_preload", True)
         data_ids_sel = []
         for data_id in data_ids:
-            format_id = estimate_file_format(data_id)
+            format_id = identify_file_format(data_id)
             data_id_mod = data_id.replace(f".{format_id}", "/")
             list_data_ids = self.cache_store.list_data_ids()
             list_data_ids_mod = [i for i in list_data_ids if data_id_mod in i]
