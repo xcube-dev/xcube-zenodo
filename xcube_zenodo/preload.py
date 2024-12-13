@@ -19,17 +19,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import logging
-import os
 import shutil
 import threading
 import time
-from typing import Callable, Union
+from typing import Callable
 import tarfile
 import zipfile
 
-import IPython
-import IPython.display
+import fsspec
 import numpy as np
 import tabulate
 import requests
@@ -39,13 +36,12 @@ from xcube.core.store import MutableDataStore
 
 from ._utils import identify_file_format
 from ._utils import translate_data_id2uri
-
-LOG = logging.getLogger(__name__)
+from .constants import LOG
 
 
 class Event:
 
-    def __init__(self, data_id: str, total_size: Union[int, float]):
+    def __init__(self, data_id: str, total_size: int | float):
         self.data_id = data_id
         self.status = "Not started"
         self.progress = 0.0
@@ -73,12 +69,13 @@ class PreloadHandle:
         self._is_cancelled = False
         self._is_closed = False
         self._cache_store = cache_store
+        self._cache_fs: fsspec.AbstractFileSystem = cache_store.fs
+        self._cache_root = cache_store.root
         self._data_ids = data_ids
         self._preload_params = preload_params
-        self._cache_root = preload_params.pop("cache_root")
         self._download_folder_name = "downloads"
-        self._download_folder = os.path.join(
-            self._cache_root, self._download_folder_name
+        self._download_folder = self._cache_fs.sep.join(
+            [self._cache_root, self._download_folder_name]
         )
         self._events = [Event(data_id, np.nan) for data_id in data_ids]
         self.lock = threading.Lock()
@@ -123,7 +120,7 @@ class PreloadHandle:
                     ]
                     for data_id in list_data_ids_mod:
                         self._cache_store.delete_data(data_id)
-        if os.path.isdir(self._download_folder):
+        if self._cache_fs.isdir(self._download_folder):
             shutil.rmtree(self._download_folder)
 
     def _monitor_preload(self):
@@ -137,6 +134,8 @@ class PreloadHandle:
             for event in self._events
         ]
         if is_jupyter():
+            import IPython.display
+
             table = tabulate.tabulate(
                 rows,
                 headers=["Data ID", "Status", "Progress", "Message"],
@@ -144,13 +143,6 @@ class PreloadHandle:
             )
             IPython.display.clear_output(wait=True)
             IPython.display.display(table)
-        else:
-            table = tabulate.tabulate(
-                rows,
-                headers=["Dataset", "Status", "Progress", "Message"],
-            )
-            os.system("clear" if os.name == "posix" else "cls")
-            print(table)
 
     def preload_data(self, *data_ids: str, **preload_params):
         self._download_data(*data_ids)
@@ -180,10 +172,12 @@ class PreloadHandle:
                     if not response.ok:
                         raise DataStoreError(response.raise_for_status())
                     record, filename = data_id.split("/")
-                    record_folder = os.path.join(self._download_folder, record)
-                    if not os.path.exists(record_folder):
-                        os.makedirs(record_folder)
-                    download_path = os.path.join(record_folder, filename)
+                    record_folder = self._cache_fs.sep.join(
+                        [self._download_folder, record]
+                    )
+                    if not self._cache_fs.isdir(record_folder):
+                        self._cache_fs.makedirs(record_folder)
+                    download_path = self._cache_fs.sep.join([record_folder, filename])
                     with open(download_path, "wb") as file:
                         for chunk in response.iter_content(chunk_size=chunk_size):
                             file.write(chunk)
@@ -209,26 +203,28 @@ class PreloadHandle:
                     time.sleep(1)
                 self._events[i].update("Decompression started", np.nan, "")
                 record, filename = data_id.split("/")
-                file_path = os.path.join(self._download_folder, record, filename)
+                file_path = self._cache_fs.sep.join(
+                    [self._download_folder, record, filename]
+                )
                 if zipfile.is_zipfile(file_path):
                     with zipfile.ZipFile(file_path, "r") as zip_ref:
                         dirname = filename.replace(".zip", "")
-                        extract_dir = os.path.join(
-                            self._download_folder, record, dirname
+                        extract_dir = self._cache_fs.sep.join(
+                            [self._download_folder, record, dirname]
                         )
                         zip_ref.extractall(extract_dir)
                 elif file_path.endswith(".tar"):
                     with tarfile.open(file_path, "r") as tar_ref:
                         dirname = filename.replace(".tar", "")
-                        extract_dir = os.path.join(
-                            self._download_folder, record, dirname
+                        extract_dir = self._cache_fs.sep.join(
+                            [self._download_folder, record, dirname]
                         )
                         tar_ref.extractall(path=extract_dir)
                 elif file_path.endswith(".tar.gz"):
                     with tarfile.open(file_path, "r:gz") as tar_ref:
                         dirname = filename.replace(".tar.gz", "")
-                        extract_dir = os.path.join(
-                            self._download_folder, record, dirname
+                        extract_dir = self._cache_fs.sep(
+                            [self._download_folder, record, dirname]
                         )
                         tar_ref.extractall(path=extract_dir)
                 self._events[i].update("Decompressed", np.nan, "")
@@ -249,13 +245,13 @@ class PreloadHandle:
                 record, filename = data_id.split("/")
                 format_id = identify_file_format(data_id)
                 dirname = filename.replace(f".{format_id}", "")
-                extract_dir = os.path.join(self._download_folder, record, dirname)
+                extract_dir = self._cache_fs.sep.join(
+                    [self._download_folder, record, dirname]
+                )
                 dss = []
-                sub_fnames = os.listdir(extract_dir)
-                for sub_fname in sub_fnames:
-                    sub_data_id = (
-                        f"{self._download_folder_name}/{record}/{dirname}/{sub_fname}"
-                    )
+                sub_files = self._cache_fs.listdir(extract_dir)
+                for sub_file in sub_files:
+                    sub_data_id = sub_file["name"].replace(f"{self._cache_root}/", "")
                     if not self._cache_store.has_data(sub_data_id):
                         LOG.debug(
                             f"File with data ID {sub_data_id} cannot be opened, "
@@ -272,7 +268,8 @@ class PreloadHandle:
                         ds, data_id, writer_id="dataset:zarr:file"
                     )
                 else:
-                    for ds, sub_fname in zip(dss, sub_fnames):
+                    for ds, sub_file in zip(dss, sub_files):
+                        sub_fname = sub_file["name"].split("/")[-1]
                         data_id = (
                             f"{record}/{dirname}/"
                             f"{".".join(sub_fname.split(".")[:-1])}.zarr"
@@ -296,4 +293,6 @@ class PreloadHandle:
 
 
 def is_jupyter():
+    import IPython
+
     return "ZMQInteractiveShell" in IPython.get_ipython().__class__.__name__

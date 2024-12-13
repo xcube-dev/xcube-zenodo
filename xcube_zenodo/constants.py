@@ -19,9 +19,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import logging
+
+
 DATA_STORE_ID = "zenodo"
+LOG = logging.getLogger("xcube.zenodo")
 API_RECORDS_ENDPOINT = "https://zenodo.org/api/records"
-PRELOAD_CACHE_FOLDER = "preload_cache/"
+CACHE_FOLDER_NAME = "zenodo_cache"
 
 MAP_FILE_EXTENSION_FORMAT = {
     "zarr": "zarr",

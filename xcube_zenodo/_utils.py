@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Any, Container, Union
+from typing import Any, Container, Optional
 
 from .constants import COMPRESSED_FORMATS
 from .constants import MAP_FILE_EXTENSION_FORMAT
@@ -66,7 +66,7 @@ def get_attrs_from_record(
     return attrs
 
 
-def identify_file_format(data_id: str) -> Union[str, None]:
+def identify_file_format(data_id: str) -> Optional[str]:
     for key, val in MAP_FILE_EXTENSION_FORMAT.items():
         if data_id.endswith(key.lower()):
             return val

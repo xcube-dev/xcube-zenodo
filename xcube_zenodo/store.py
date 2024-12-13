@@ -19,9 +19,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import logging
 import os
-from typing import Tuple, Iterator, Container, Any, Union
+from typing import Tuple, Iterator, Container, Any
 
 import requests
 import xarray as xr
@@ -40,29 +39,32 @@ from xcube.core.store import (
 
 from .constants import API_RECORDS_ENDPOINT
 from .constants import COMPRESSED_FORMATS
-from .constants import PRELOAD_CACHE_FOLDER
+from .constants import CACHE_FOLDER_NAME
 from .preload import PreloadHandle
 from ._utils import identify_file_format
 from ._utils import get_attrs_from_record
 from ._utils import is_supported_file_format
 from ._utils import is_supported_compressed_file_format
 from ._utils import translate_data_id2fs_path
-
-
-LOG = logging.getLogger(__name__)
+from .constants import LOG
 
 
 class ZenodoDataStore(DataStore):
     """Implementation of the Zenodo data store defined in the ``xcube_zenodo``
     plugin."""
 
-    def __init__(self, access_token: str, preload_cache_folder: str = None):
+    def __init__(
+        self,
+        access_token: str,
+        cache_store_id: str = "file",
+        cache_store_params: dict = None,
+    ):
         self._requests_params = {"access_token": access_token}
         self._https_data_store = new_data_store("https", root="zenodo.org")
-        self._cache_root = os.path.join(
-            os.getcwd(), preload_cache_folder or PRELOAD_CACHE_FOLDER
-        )
-        self.cache_store = new_data_store("file", root=self._cache_root, max_depth=3)
+        if cache_store_params is None:
+            cache_store_params = dict(root=CACHE_FOLDER_NAME)
+        cache_store_params["max_depth"] = cache_store_params.pop("max_depth", 3)
+        self.cache_store = new_data_store(cache_store_id, **cache_store_params)
 
     @classmethod
     def get_data_store_params_schema(cls) -> JsonObjectSchema:
@@ -95,7 +97,7 @@ class ZenodoDataStore(DataStore):
 
     def get_data_ids(
         self, data_type: DataTypeLike = None, include_attrs: Container[str] = None
-    ) -> Union[Iterator[str], Iterator[tuple[str, dict[str, Any]]]]:
+    ) -> Iterator[str] | Iterator[tuple[str, dict[str, Any]]]:
         params = self._requests_params
         page = 1
         while True:
@@ -210,7 +212,6 @@ class ZenodoDataStore(DataStore):
         preload_handle = PreloadHandle(
             self.cache_store,
             *data_ids_sel,
-            cache_root=self._cache_root,
             **preload_params,
         )
         if data_ids_sel:
