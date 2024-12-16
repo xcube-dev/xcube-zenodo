@@ -19,13 +19,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Any, Container
+from typing import Any, Container, Optional
 
-from xcube.core.store import DATASET_TYPE
-from xcube.core.store import MULTI_LEVEL_DATASET_TYPE
-from xcube.core.store import DataTypeLike
-
-
+from .constants import COMPRESSED_FORMATS
 from .constants import MAP_FILE_EXTENSION_FORMAT
 
 
@@ -70,18 +66,27 @@ def get_attrs_from_record(
     return attrs
 
 
-def estimate_file_format(data_id: str) -> str:
-    ext = data_id.split(".")[-1]
-    format_id = MAP_FILE_EXTENSION_FORMAT.get(ext.lower())
-    return format_id
+def identify_file_format(data_id: str) -> Optional[str]:
+    for key, val in MAP_FILE_EXTENSION_FORMAT.items():
+        if data_id.endswith(key.lower()):
+            return val
+    return None
 
 
 def is_supported_file_format(data_id: str) -> bool:
-    return estimate_file_format(data_id) is not None
+    return identify_file_format(data_id) is not None
 
 
-def translate_data_id2uri(data_id: str) -> str:
+def is_supported_compressed_file_format(data_id: str) -> bool:
+    return identify_file_format(data_id) in COMPRESSED_FORMATS
+
+
+def translate_data_id2fs_path(data_id: str) -> str:
     components = data_id.split("/")
     record_id = components[0]
     file_key = "/".join(components[1:])
     return f"records/{record_id}/files/{file_key}"
+
+
+def translate_data_id2uri(data_id: str) -> str:
+    return f"https://zenodo.org/{translate_data_id2fs_path(data_id)}"

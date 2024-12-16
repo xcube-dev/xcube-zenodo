@@ -19,8 +19,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import logging
+
+
 DATA_STORE_ID = "zenodo"
+LOG = logging.getLogger("xcube.zenodo")
 API_RECORDS_ENDPOINT = "https://zenodo.org/api/records"
+CACHE_FOLDER_NAME = "zenodo_cache"
 
 MAP_FILE_EXTENSION_FORMAT = {
     "zarr": "zarr",
@@ -31,4 +36,8 @@ MAP_FILE_EXTENSION_FORMAT = {
     "geotiff": "geotiff",
     "shp": "shapefile",
     "geojson": "geojson",
+    "zip": "zip",
+    "tar": "tar",
+    "tar.gz": "tar.gz",
 }
+COMPRESSED_FORMATS = list(MAP_FILE_EXTENSION_FORMAT.keys())[-3:]
