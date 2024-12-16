@@ -78,6 +78,7 @@ class ZenodoDataStore(DataStore):
                     "Datasets which are accessed using prelaod_data will be stored "
                     "in this folder in a prepared way."
                 ),
+                default=CACHE_FOLDER_NAME,
             ),
         )
         return JsonObjectSchema(

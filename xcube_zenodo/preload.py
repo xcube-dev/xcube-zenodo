@@ -244,9 +244,9 @@ class PreloadHandle:
                 self._events[i].update("File processing started", np.nan, "")
                 record, filename = data_id.split("/")
                 format_id = identify_file_format(data_id)
-                dirname = filename.replace(f".{format_id}", "")
+                filename_unzip = filename.replace(f".{format_id}", "")
                 extract_dir = self._cache_fs.sep.join(
-                    [self._download_folder, record, dirname]
+                    [self._download_folder, record, filename_unzip]
                 )
                 dss = []
                 sub_files = self._cache_fs.listdir(extract_dir)
@@ -260,7 +260,9 @@ class PreloadHandle:
                     dss.append(self._cache_store.open_data(sub_data_id))
                 if len(dss) == 1:
                     self._cache_store.write_data(
-                        dss[0], data_id, writer_id="dataset:zarr:file"
+                        dss[0],
+                        f"{record}/{filename_unzip}",
+                        writer_id="dataset:zarr:file",
                     )
                 elif preload_params.get("merge"):
                     ds = xr.merge(dss)
@@ -271,7 +273,7 @@ class PreloadHandle:
                     for ds, sub_file in zip(dss, sub_files):
                         sub_fname = sub_file["name"].split("/")[-1]
                         data_id = (
-                            f"{record}/{dirname}/"
+                            f"{record}/{filename_unzip}/"
                             f"{".".join(sub_fname.split(".")[:-1])}.zarr"
                         )
                         self._cache_store.write_data(
