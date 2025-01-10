@@ -12,22 +12,63 @@ named `zenodo` to xcube. The data store is used to access datasets which are pub
 on [Zenodo](https://zenodo.org/).
 
 
-## Setup <a name="setup"></a>
 
-### Installing the xcube-zenodo plugin from the repository <a name="install_source"></a>
 
-To install xcube-zenodo directly from the git repository, clone the repository,
-direct into `xcube-zenodo`, and follow the steps below:
+## Installing the xcube-zenodo plugin
+
+This section describes three alternative methods you can use to install the
+xcube-zenodo plugin.
+
+For installation of conda packages, we recommend
+[mamba](https://mamba.readthedocs.io/). It is also possible to use conda,
+but note that installation may be significantly slower with conda than with
+mamba. If using conda rather than mamba, replace the `mamba` command with
+`conda` in the installation commands given below.
+
+### Installation into a new environment with mamba
+
+This method creates a new environment and installs the latest conda-forge
+release of xcube-zenodo, along with all its required dependencies, into the
+newly created environment.
+
+To do so, execute the following commands:
 
 ```bash
-conda env create -f environment.yml
-conda activate xcube-zenodo
-pip install .
+mamba create --name xcube-zenodo --channel conda-forge xcube-zenodo
+mamba activate xcube-zenodo
 ```
 
-This installs all the dependencies of `xcube-zenodo` into a fresh conda
-environment, and installs xcube-zenodo into this environment from the
-repository.
+The name of the environment may be freely chosen.
+
+### Installation into an existing environment with mamba
+
+This method assumes that you have an existing environment, and you want
+to install xcube-zenodo into it.
+
+With the existing environment activated, execute this command:
+
+```bash
+mamba install --channel conda-forge xcube-zenodo
+```
+
+Once again, xcube and any other necessary dependencies will be installed
+automatically if they are not already installed.
+
+### Installation into an existing environment from the repository
+
+If you want to install xcube-zenodo directly from the git repository (for example
+in order to use an unreleased version or to modify the code), you can
+do so as follows:
+
+```bash
+mamba create --name xcube-zenodo --channel conda-forge --only-deps xcube-zenodo
+mamba activate xcube-zenodo
+git clone https://github.com/dcs4cop/xcube-cds.git
+python -m pip install --no-deps --editable xcube-zenodo/
+```
+
+This installs all the dependencies of xcube-zenodo into a fresh conda environment,
+then installs xcube-cds into this environment from the repository.
 
 ### Create Access Token
 Create an access token for the Zenodo API following the [zenodo documentation](https://zenodo.org/login/?next=%2Faccount%2Fsettings%2Fapplications%2Ftokens%2Fnew%2F).

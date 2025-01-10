@@ -1,4 +1,4 @@
-[build-system]
+p[build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
