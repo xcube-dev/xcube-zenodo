@@ -21,6 +21,8 @@
 
 from typing import Optional
 
+import fsspec
+
 from .constants import COMPRESSED_FORMATS
 from .constants import MAP_FILE_EXTENSION_FORMAT
 
@@ -45,3 +47,24 @@ def translate_data_id2fs_path(data_id: str) -> str:
 
 def translate_data_id2uri(data_id: str) -> str:
     return f"https://zenodo.org/{translate_data_id2fs_path(data_id)}"
+
+
+def is_zarr_directory(path: str, fs: fsspec.AbstractFileSystem) -> bool:
+    """Check if a directory is a valid Zarr store using fsspec.
+
+    Parameters:
+        path: The path to the directory (local or remote).
+        fs: File system object. Defaults to None.
+
+    Returns:
+        True if the directory is a valid Zarr store, False otherwise.
+    """
+    # Check if the directory exists
+    if not fs.exists(path) or not fs.isdir(path):
+        return False
+
+    # List files in the directory and check for Zarr metadata files
+    files = fs.ls(path)
+    has_zgroup = any(file.endswith(".zgroup") for file in files)
+    has_zarray = any(file.endswith(".zarray") for file in files)
+    return has_zgroup or has_zarray
