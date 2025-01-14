@@ -113,7 +113,7 @@ class ZenodoDataStore(DataStore):
                 if not record["files"]:
                     continue
                 for file in record["files"]:
-                    data_id = f"{record["id"]}/{file["key"]}"
+                    data_id = f"{record['id']}/{file['key']}"
                     if not is_supported_file_format(data_id):
                         continue
                     if include_attrs is None:

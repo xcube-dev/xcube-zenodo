@@ -3,13 +3,14 @@ channels:
   - conda-forge
 dependencies:
   # Required
-  - python>=3.10
+  - python >=3.10
   - fsspec
   - numpy
   - requests
   - tabulate
   - xarray
-  - xcube >= 1.7.0
+  - xcube >=1.7.0
+  - zarr >=2.11,<3  # until we can ensure zarr 3 compatibility; see Issue xcube #1102
   # for testing
   - black
   - flake8

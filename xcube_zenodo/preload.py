@@ -274,7 +274,7 @@ class PreloadHandle:
                         sub_fname = sub_file["name"].split("/")[-1]
                         data_id = (
                             f"{record}/{filename_unzip}/"
-                            f"{".".join(sub_fname.split(".")[:-1])}.zarr"
+                            f"{'.'.join(sub_fname.split('.')[:-1])}.zarr"
                         )
                         self._cache_store.write_data(
                             ds, data_id, writer_id="dataset:zarr:file"
