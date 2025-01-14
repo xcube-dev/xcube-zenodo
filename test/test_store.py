@@ -29,6 +29,7 @@ import xarray as xr
 from xcube.core.store import new_data_store
 from xcube.core.store import get_data_store_params_schema
 from xcube.core.store import DatasetDescriptor
+from xcube.core.store import DataStoreError
 from xcube.util.jsonschema import JsonObjectSchema
 
 from xcube_zenodo.constants import DATA_STORE_ID
@@ -44,17 +45,17 @@ class ZenodoDataStoreTest(unittest.TestCase):
                 "precipitation": (("time", "x", "y"), np.random.rand(5, 5, 5)),
             }
         )
-        self.access_token = "xxx"
 
     def test_get_data_store_params_schema(self):
         schema = get_data_store_params_schema(DATA_STORE_ID)
         self.assertIsInstance(schema, JsonObjectSchema)
-        self.assertIn("access_token", schema.properties)
-        self.assertIn("access_token", schema.required)
-        self.assertNotIn("url", schema.properties)
+        self.assertIn("cache_store_id", schema.properties)
+        self.assertIn("cache_store_params", schema.properties)
+        self.assertNotIn("cache_store_id", schema.required)
+        self.assertNotIn("cache_store_params", schema.required)
 
     def test_get_data_types(self):
-        store = new_data_store(DATA_STORE_ID, access_token=self.access_token)
+        store = new_data_store(DATA_STORE_ID)
         self.assertCountEqual(
             ("dataset", "mldataset", "geodataframe"), store.get_data_types()
         )
@@ -62,99 +63,30 @@ class ZenodoDataStoreTest(unittest.TestCase):
     @patch("xcube.core.store.fs.store.BaseFsDataStore.get_data_types_for_data")
     def test_get_data_types_for_data(self, mock_get_data_types):
         mock_get_data_types.return_value = ("dataset", "mldataset")
-        store = new_data_store(DATA_STORE_ID, access_token=self.access_token)
+        store = new_data_store(DATA_STORE_ID)
         self.assertCountEqual(
             ("dataset", "mldataset"),
             store.get_data_types_for_data(self.data_id_tif),
         )
         mock_get_data_types.assert_called_once_with("records/1000000/files/test.tif")
 
-    @patch("xcube_zenodo.store.requests.get")
-    def test_get_data_ids(self, mock_get):
-        mock_response_1 = Mock()
-        mock_response_1.status_code = 500
-
-        mock_response_2 = Mock()
-        mock_response_2.status_code = 200
-        mock_response_2.json.return_value = {
-            "hits": {"hits": [{"id": 10000000, "title": "test_title", "files": []}]},
-            "links": {"next": "link_to_next_page"},
-        }
-        mock_response_2.raise_for_status.return_value = None
-
-        mock_response_3 = Mock()
-        mock_response_3.status_code = 200
-        mock_response_3.json.return_value = {
-            "hits": {
-                "hits": [
-                    {
-                        "id": 10000000,
-                        "title": "test_title",
-                        "files": [{"key": "test.pdf"}],
-                    }
-                ]
-            },
-            "links": {"next": "link_to_next_page"},
-        }
-        mock_response_3.raise_for_status.return_value = None
-
-        mock_response_4 = Mock()
-        mock_response_4.status_code = 200
-        mock_response_4.raise_for_status.return_value = None
-        mock_response_4.json.return_value = {
-            "hits": {
-                "hits": [
-                    {
-                        "id": 10000000,
-                        "title": "test_title",
-                        "files": [
-                            {
-                                "key": "test.tif",
-                                "size": 1000,
-                                "links": {"self": "https://zenodo.org/test.tif"},
-                            }
-                        ],
-                    }
-                ]
-            },
-            "links": {},
-        }
-        mock_get.side_effect = [
-            mock_response_1,
-            mock_response_2,
-            mock_response_3,
-            mock_response_4,
-        ]
-
-        store = new_data_store(DATA_STORE_ID, access_token=self.access_token)
-        include_attrs = ["title", "file_key", "file_size", "file_links"]
-        data_ids = store.get_data_ids(include_attrs=include_attrs)
-        data_ids = list(data_ids)
-        expected_data_id = (
-            "10000000/test.tif",
-            {
-                "title": "test_title",
-                "file_key": "test.tif",
-                "file_size": 1000,
-                "file_links": {"self": "https://zenodo.org/test.tif"},
-            },
+    def test_get_data_ids(self):
+        store = new_data_store(DATA_STORE_ID)
+        with self.assertRaises(DataStoreError) as cm:
+            store.get_data_ids()
+        self.assertEqual(
+            (
+                "`get_data_ids` is not supported because Zenodo hosts all types of "
+                "research, making it unhelpful to crawl through all records."
+            ),
+            f"{cm.exception}",
         )
-        self.assertEqual(expected_data_id, data_ids[0])
-        self.assertEqual(4, mock_get.call_count)
-
-        # test without attributes
-        mock_get.reset_mock()
-        mock_get.side_effect = [mock_response_4]
-        data_ids = store.get_data_ids()
-        data_ids = list(data_ids)
-        self.assertEqual("10000000/test.tif", data_ids[0])
-        self.assertEqual(1, mock_get.call_count)
 
     @patch("xcube.core.store.fs.store.BaseFsDataStore.has_data")
     def test_has_data(self, mock_has_data):
         mock_has_data.return_value = True
 
-        store = new_data_store(DATA_STORE_ID, access_token=self.access_token)
+        store = new_data_store(DATA_STORE_ID)
         self.assertTrue(store.has_data(self.data_id_tif))
         mock_has_data.assert_called_once_with(
             data_id="records/1000000/files/test.tif", data_type=None
@@ -163,7 +95,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
     @patch("xcube.core.store.fs.store.BaseFsDataStore.describe_data")
     def test_describe_data(self, mock_describe_data):
         mock_describe_data.return_value = DatasetDescriptor(data_id=self.data_id_tif)
-        store = new_data_store(DATA_STORE_ID, access_token=self.access_token)
+        store = new_data_store(DATA_STORE_ID)
         descriptor = store.describe_data(self.data_id_tif)
         expected_descriptor = {"data_id": self.data_id_tif, "data_type": "dataset"}
         self.assertIsInstance(descriptor, DatasetDescriptor)
@@ -173,7 +105,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
         )
 
     def test_get_data_opener_ids(self):
-        store = new_data_store(DATA_STORE_ID, access_token=self.access_token)
+        store = new_data_store(DATA_STORE_ID)
         self.assertCountEqual(
             (
                 "dataset:netcdf:https",
@@ -201,7 +133,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
         )
 
     def test_get_open_data_params_schema(self):
-        store = new_data_store(DATA_STORE_ID, access_token=self.access_token)
+        store = new_data_store(DATA_STORE_ID)
         schema = store.get_open_data_params_schema()
         self.assertIsInstance(schema, JsonObjectSchema)
         self.assertIn("log_access", schema.properties)
@@ -225,7 +157,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
     @patch("xcube.core.store.fs.store.BaseFsDataStore.open_data")
     def test_open_data(self, mock_open_data):
         mock_open_data.return_value = self.mock_dataset
-        store = new_data_store(DATA_STORE_ID, access_token=self.access_token)
+        store = new_data_store(DATA_STORE_ID)
 
         ds = store.open_data(data_id=self.data_id_tif)
         self.assertIsInstance(ds, xr.Dataset)
@@ -237,7 +169,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
         )
 
     def test_search_data(self):
-        store = new_data_store(DATA_STORE_ID, access_token=self.access_token)
+        store = new_data_store(DATA_STORE_ID)
         with self.assertRaises(NotImplementedError) as context:
             store.search_data()
         self.assertEqual(
