@@ -9,7 +9,7 @@ dependencies:
   - requests
   - tabulate
   - xarray
-  - xcube >= 1.7.0
+  - xcube >=1.7.0
   - zarr >=2.11,<3  # until we can ensure zarr 3 compatibility; see Issue xcube #1102
   # for testing
   - black
