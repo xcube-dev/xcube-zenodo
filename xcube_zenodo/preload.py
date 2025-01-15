@@ -275,12 +275,14 @@ class PreloadHandle:
                     self._cache_store.write_data(
                         dss[0],
                         f"{record}/{filename_unzip}",
-                        writer_id="dataset:zarr:file",
+                        writer_id=f"dataset:zarr:{self._cache_store.protocol}",
                     )
                 elif preload_params.get("merge"):
                     ds = xr.merge(dss)
                     self._cache_store.write_data(
-                        ds, data_id, writer_id="dataset:zarr:file"
+                        ds,
+                        data_id,
+                        writer_id=f"dataset:zarr:{self._cache_store.protocol}",
                     )
                 else:
                     for ds, sub_file in zip(dss, sub_files):
@@ -290,7 +292,9 @@ class PreloadHandle:
                             f"{'.'.join(sub_fname.split('.')[:-1])}.zarr"
                         )
                         self._cache_store.write_data(
-                            ds, data_id, writer_id="dataset:zarr:file"
+                            ds,
+                            data_id,
+                            writer_id=f"dataset:zarr:{self._cache_store.protocol}",
                         )
                         LOG.info(
                             f"Merge is set to False. The sub-dataset is "

@@ -150,7 +150,9 @@ class ZenodoDataStore(DataStore):
                     f"Please use store.preload_data({data_id}) first."
                 )
             return self.cache_store.open_data(
-                data_id=data_id, opener_id="dataset:zarr:file", **open_params
+                data_id=data_id,
+                opener_id=f"dataset:zarr:{self.cache_store.protocol}",
+                **open_params,
             )
         elif self.cache_store.has_data(data_id):
             return self.cache_store.open_data(data_id=data_id, **open_params)
