@@ -37,13 +37,10 @@ from xcube.core.store import (
     new_data_store,
 )
 
-from .constants import API_RECORDS_ENDPOINT
 from .constants import COMPRESSED_FORMATS
 from .constants import CACHE_FOLDER_NAME
 from .preload import PreloadHandle
 from ._utils import identify_file_format
-from ._utils import get_attrs_from_record
-from ._utils import is_supported_file_format
 from ._utils import is_supported_compressed_file_format
 from ._utils import translate_data_id2fs_path
 from .constants import LOG
@@ -55,11 +52,9 @@ class ZenodoDataStore(DataStore):
 
     def __init__(
         self,
-        access_token: str,
         cache_store_id: str = "file",
         cache_store_params: dict = None,
     ):
-        self._requests_params = {"access_token": access_token}
         self._https_data_store = new_data_store("https", root="zenodo.org")
         if cache_store_params is None:
             cache_store_params = dict(root=CACHE_FOLDER_NAME)
@@ -69,21 +64,25 @@ class ZenodoDataStore(DataStore):
     @classmethod
     def get_data_store_params_schema(cls) -> JsonObjectSchema:
         params = dict(
-            access_token=JsonStringSchema(
-                title="Zenodo access token.",
-            ),
-            preload_cache_folder=JsonStringSchema(
-                title="Preload cache folder.",
+            cache_store_id=JsonStringSchema(
+                title="Store ID of cache data store.",
                 description=(
-                    "Datasets which are accessed using prelaod_data will be stored "
-                    "in this folder in a prepared way."
+                    "Store ID of a filesystem-based data store implemented in xcube."
                 ),
-                default=CACHE_FOLDER_NAME,
+                default="file",
+            ),
+            cache_store_params=JsonObjectSchema(
+                title="Store parameters of cache data store.",
+                description=(
+                    "Store parameters of a filesystem-based data store"
+                    "implemented in xcube."
+                ),
+                default=dict(root=CACHE_FOLDER_NAME, max_depth=3),
             ),
         )
         return JsonObjectSchema(
             properties=dict(**params),
-            required=["access_token"],
+            required=[],
             additional_properties=False,
         )
 
@@ -99,31 +98,10 @@ class ZenodoDataStore(DataStore):
     def get_data_ids(
         self, data_type: DataTypeLike = None, include_attrs: Container[str] = None
     ) -> Iterator[str] | Iterator[tuple[str, dict[str, Any]]]:
-        params = self._requests_params
-        page = 1
-        while True:
-            params["page"] = page
-            response = requests.get(API_RECORDS_ENDPOINT, params=params)
-            if response.status_code == 500:
-                page += 1
-                continue
-            response.raise_for_status()
-            data = response.json()
-            for record in data["hits"]["hits"]:
-                if not record["files"]:
-                    continue
-                for file in record["files"]:
-                    data_id = f"{record['id']}/{file['key']}"
-                    if not is_supported_file_format(data_id):
-                        continue
-                    if include_attrs is None:
-                        yield data_id
-                    else:
-                        attrs = get_attrs_from_record(record, file, include_attrs)
-                        yield data_id, attrs
-            if "next" not in data["links"]:
-                break
-            page += 1
+        raise DataStoreError(
+            "`get_data_ids` is not supported because Zenodo hosts all types of "
+            "research, making it unhelpful to crawl through all records."
+        )
 
     def has_data(self, data_id: str, data_type: str = None) -> bool:
         uri = translate_data_id2fs_path(data_id)

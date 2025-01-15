@@ -19,51 +19,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Any, Container, Optional
+from typing import Optional
 
 from .constants import COMPRESSED_FORMATS
 from .constants import MAP_FILE_EXTENSION_FORMAT
-
-
-def get_attrs_from_record(
-    record: dict, zenodo_file: dict, include_attrs: Container[str]
-) -> dict[str, Any]:
-    attrs = {}
-    supported_record_keys = [
-        "created",
-        "modified",
-        "id",
-        "conceptrecid",
-        "doi",
-        "conceptdoi",
-        "doi_url",
-        "metadata",
-        "title",
-        "links",
-        "updated",
-        "recid",
-        "revision",
-        "owners",
-        "status",
-        "stats",
-        "state",
-        "submitted",
-    ]
-    for key in supported_record_keys:
-        if key in include_attrs and key in record:
-            attrs[key] = record[key]
-    supported_file_keys = [
-        "file_id",
-        "file_key",
-        "file_size",
-        "file_checksum",
-        "file_links",
-    ]
-    for key in supported_file_keys:
-        key_mod = key.replace("file_", "")
-        if key in include_attrs and key_mod in zenodo_file:
-            attrs[key] = zenodo_file[key_mod]
-    return attrs
 
 
 def identify_file_format(data_id: str) -> Optional[str]:
@@ -71,10 +30,6 @@ def identify_file_format(data_id: str) -> Optional[str]:
         if data_id.endswith(key.lower()):
             return val
     return None
-
-
-def is_supported_file_format(data_id: str) -> bool:
-    return identify_file_format(data_id) is not None
 
 
 def is_supported_compressed_file_format(data_id: str) -> bool:

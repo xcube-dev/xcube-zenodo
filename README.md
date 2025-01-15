@@ -70,10 +70,6 @@ python -m pip install --no-deps --editable xcube-zenodo/
 This installs all the dependencies of xcube-zenodo into a fresh conda environment,
 then installs xcube-cds into this environment from the repository.
 
-### Create Access Token
-Create an access token for the Zenodo API following the [zenodo documentation](https://zenodo.org/login/?next=%2Faccount%2Fsettings%2Fapplications%2Ftokens%2Fnew%2F).
-This access code will be required when initializing the zenodo data store.
-
 ## Testing <a name="testing"></a>
 
 To run the unit test suite:
