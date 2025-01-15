@@ -66,13 +66,16 @@ class ZenodoDataStore(DataStore):
         params = dict(
             cache_store_id=JsonStringSchema(
                 title="Store ID of cache data store.",
-                description="Store ID of a file-based data store implement in xcube.",
+                description=(
+                    "Store ID of a filesystem-based data store implemented in xcube."
+                ),
                 default="file",
             ),
             cache_store_params=JsonObjectSchema(
                 title="Store parameters of cache data store.",
                 description=(
-                    "Store parameters of a file-based data store implement in xcube."
+                    "Store parameters of a filesystem-based data store"
+                    "implemented in xcube."
                 ),
                 default=dict(root=CACHE_FOLDER_NAME, max_depth=3),
             ),
