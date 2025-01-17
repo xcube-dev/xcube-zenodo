@@ -36,6 +36,7 @@ from xcube.core.store import MutableDataStore
 
 from ._utils import identify_file_format
 from ._utils import translate_data_id2uri
+from ._utils import is_zarr_directory
 from .constants import LOG
 
 
@@ -249,25 +250,39 @@ class PreloadHandle:
                     [self._download_folder, record, filename_unzip]
                 )
                 dss = []
-                sub_files = self._cache_fs.listdir(extract_dir)
-                for sub_file in sub_files:
-                    sub_data_id = sub_file["name"].replace(f"{self._cache_root}/", "")
-                    if not self._cache_store.has_data(sub_data_id):
-                        LOG.debug(
-                            f"File with data ID {sub_data_id} cannot be opened, "
-                            f"and thus will not be considered."
+                if is_zarr_directory(extract_dir, self._cache_fs):
+                    dss.append(
+                        self._cache_store.open_data(
+                            extract_dir,
+                            opener_id=f"dataset:zarr:{self._cache_store.protocol}",
                         )
-                    dss.append(self._cache_store.open_data(sub_data_id))
+                    )
+                    if not filename_unzip.endswith(".zarr"):
+                        filename_unzip = f"{filename_unzip}.zarr"
+                else:
+                    sub_files = self._cache_fs.listdir(extract_dir)
+                    for sub_file in sub_files:
+                        sub_data_id = sub_file["name"].replace(
+                            f"{self._cache_root}/", ""
+                        )
+                        if not self._cache_store.has_data(sub_data_id):
+                            LOG.debug(
+                                f"File with data ID {sub_data_id} cannot be opened, "
+                                f"and thus will not be considered."
+                            )
+                        dss.append(self._cache_store.open_data(sub_data_id))
                 if len(dss) == 1:
                     self._cache_store.write_data(
                         dss[0],
                         f"{record}/{filename_unzip}",
-                        writer_id="dataset:zarr:file",
+                        writer_id=f"dataset:zarr:{self._cache_store.protocol}",
                     )
                 elif preload_params.get("merge"):
                     ds = xr.merge(dss)
                     self._cache_store.write_data(
-                        ds, data_id, writer_id="dataset:zarr:file"
+                        ds,
+                        data_id,
+                        writer_id=f"dataset:zarr:{self._cache_store.protocol}",
                     )
                 else:
                     for ds, sub_file in zip(dss, sub_files):
@@ -277,7 +292,9 @@ class PreloadHandle:
                             f"{'.'.join(sub_fname.split('.')[:-1])}.zarr"
                         )
                         self._cache_store.write_data(
-                            ds, data_id, writer_id="dataset:zarr:file"
+                            ds,
+                            data_id,
+                            writer_id=f"dataset:zarr:{self._cache_store.protocol}",
                         )
                         LOG.info(
                             f"Merge is set to False. The sub-dataset is "

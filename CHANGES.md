@@ -2,6 +2,9 @@
 
 ### Enhancements
 
+* The data store now supports preloading compressed Zarr files even without an explicit
+  `.zarr` extension in the file name, by verifying if the uncompressed directory is a
+  valid Zarr structure.
 
 ### Fixes
 
