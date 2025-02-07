@@ -12,6 +12,48 @@ named `zenodo` to xcube. The data store is used to access datasets which are pub
 on [Zenodo](https://zenodo.org/).
 
 
+## How to use the xcube-zenodo plugin
+
+### Lazy access of datasets published as tif or netcdfs
+
+To access datasets publish on Zenodo, find your dataset on the Zenodo webpage and build
+the data ID with the following structure `"<record_id>/<file_name>"`. For example for 
+the [Canopy height and biomass map for Europe](https://zenodo.org/records/8154445) the
+data ID for the dataset "planet_canopy_cover_30m_v0.1.tif" will be given by
+`"8154445/planet_canopy_cover_30m_v0.1.tif"`. The record ID can be found in the url of 
+the zenodo page. The following few lines of code will lazy load the dataset. 
+
+```python
+from xcube.core.store import new_data_store
+
+store = new_data_store("zenodo")
+ds = store.open_data(
+    "8154445/planet_canopy_cover_30m_v0.1.tif",
+    tile_size=(1024, 1024)
+)
+```
+
+To learn more check out the [example notebook zenodo_data_store.ipynb](examples/zenodo_data_store.ipynb).
+
+
+### Access compressed datasets via the xcube's preload API
+
+If datasets are published as `zip`, `tar`, `tar.gz`, you can use the preload API to
+preload the data into the local or s3 file system. If the compressed file contains
+multiple datasets, the data IDs will be extended by one layer. A short example is shown
+below.
+
+```python
+from xcube.core.store import new_data_store
+
+store = new_data_store("zenodo")
+handler = store.preload_data("13333034/andorra.zip")
+preloaded_data_ids = store.cache_store.list_data_ids()
+ds = store.open_data(preloaded_data_ids[0])
+```
+
+To learn more check out the example notebooks zenodo_data_store_preload*.ipynb in
+[examples](examples).
 
 
 ## Installing the xcube-zenodo plugin
