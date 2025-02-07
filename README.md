@@ -132,3 +132,19 @@ To produce an HTML
 ```bash
 pytest --cov-report html --cov=xcube_zenodo
 ```
+
+### Some notes on the strategy of unit-testing <a name="unittest_strategy"></a>
+
+The unit test suite uses [pytest-recording](https://pypi.org/project/pytest-recording/)
+to mock https requests via the Python library `requests`. During development an
+actual HTTP request is performed and the responses are saved in `cassettes/**.yaml`
+files. During testing, only the `cassettes/**.yaml` files are used without an actual
+HTTP request. During development, to save the responses to `cassettes/**.yaml`, run
+
+```bash
+pytest -v -s --record-mode new_episodes
+```
+Note that `--record-mode new_episodes` overwrites all cassettes. If one only
+wants to write cassettes which are not saved already, `--record-mode once` can be used.
+[pytest-recording](https://pypi.org/project/pytest-recording/) supports all records modes given by [VCR.py](https://vcrpy.readthedocs.io/en/latest/usage.html#record-modes).
+After recording the cassettes, testing can be then performed as usual.

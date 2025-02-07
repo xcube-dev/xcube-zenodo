@@ -206,7 +206,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
         handle = store.preload_data(data_id, blocking=True, silent=True)
         handle.close()
 
-        self.assertEqual(
+        self.assertCountEqual(
             ["6453099/diaz2016_inputs_raw.zarr"], store.cache_store.list_data_ids()
         )
         ds = store.open_data("6453099/diaz2016_inputs_raw.zarr")
@@ -247,7 +247,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
         self.assertEqual(msg, str(cm.output[-1]))
         handle.close()
 
-        self.assertEqual(
+        self.assertCountEqual(
             [
                 "13333034/andorra/disturbance_severity_1985_2023_andorra.zarr",
                 "13333034/andorra/number_disturbances_andorra.zarr",
