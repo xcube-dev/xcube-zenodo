@@ -142,14 +142,6 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
         format_ext = identify_compressed_file_format(data_id)
         data_id_mod = data_id.replace(f".{format_ext}", "")
         extract_dir = self._cache_fs.sep.join([self._download_folder, data_id_mod])
-        # if is_zarr_directory(extract_dir, self._cache_fs):
-        #     ds = self._cache_store.open_data(extract_dir, opener_id=self._io_id)
-        #     if not data_id_mod.endswith(".zarr"):
-        #         data_id_mod = f"{data_id_mod}.zarr"
-        #     self._cache_store.write_data(
-        #         ds, data_id_mod, writer_id=self._io_id, replace=True
-        #     )
-        # else:
         sub_files = self._cache_fs.listdir(extract_dir)
         total_size = sum([sub_file["size"] for sub_file in sub_files])
         size_count = 0
@@ -162,6 +154,8 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
                 if len(sub_files) == 1:
                     sub_data_id_mod = "/".join(sub_data_id_mod.split("/")[:-1])
                 sub_data_id_mod = sub_data_id_mod.replace(format_ext, "zarr")
+                if not sub_data_id_mod.endswith(".zarr"):
+                    sub_data_id_mod = f"{data_id_mod}.zarr"
                 self._cache_store.write_data(
                     ds, sub_data_id_mod, writer_id=self._io_id, replace=True
                 )

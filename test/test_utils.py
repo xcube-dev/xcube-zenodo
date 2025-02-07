@@ -21,12 +21,10 @@
 
 import unittest
 
-from fsspec.implementations.memory import MemoryFileSystem
 
 from xcube_zenodo._utils import (
     identify_compressed_file_format,
     is_supported_compressed_file_format,
-    is_zarr_directory,
     translate_data_id2uri,
 )
 
@@ -50,25 +48,3 @@ class UtilsTest(unittest.TestCase):
     def test_translate_data_id2uri(self):
         test_uri = translate_data_id2uri("1234567/test.tif")
         self.assertEqual("https://zenodo.org/records/1234567/files/test.tif", test_uri)
-
-    def test_is_zarr_directory(self):
-        self.fs = MemoryFileSystem()
-        self.valid_zarr_path = "valid_zarr"
-        self.invalid_zarr_path = "invalid_zarr"
-        self.empty_path = "empty"
-
-        # Create a valid Zarr directory
-        self.fs.mkdir(self.valid_zarr_path)
-        self.fs.touch(f"{self.valid_zarr_path}/.zgroup")
-
-        # Create an invalid directory (no Zarr metadata files)
-        self.fs.mkdir(self.invalid_zarr_path)
-        self.fs.touch(f"{self.invalid_zarr_path}/random_file.txt")
-
-        # Create an empty directory
-        self.fs.mkdir(self.empty_path)
-
-        self.assertTrue(is_zarr_directory(self.valid_zarr_path, self.fs))
-        self.assertFalse(is_zarr_directory(self.invalid_zarr_path, self.fs))
-        self.assertFalse(is_zarr_directory(self.empty_path, self.fs))
-        self.assertFalse(is_zarr_directory("non_existent", self.fs))
