@@ -14,7 +14,7 @@ on [Zenodo](https://zenodo.org/).
 
 ## How to use the xcube-zenodo plugin
 
-### Lazy access of datasets published as tif or netcdfs
+### Lazy access of datasets published as `tif` or `netcdfs`
 
 To access datasets publish on Zenodo, find your dataset on the Zenodo webpage and build
 the data ID with the following structure `"<record_id>/<file_name>"`. For example for 
