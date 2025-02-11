@@ -169,7 +169,8 @@ class ZenodoDataStore(DataStore):
     def get_preload_data_params(self) -> JsonObjectSchema:
         params = dict(
             blocking=JsonBooleanSchema(
-                title="Swich to block the preloading process.",
+                title="Switch to make the preloading process blocking or "
+                "non-blocking",
                 description="If True, the preloading process blocks the script.",
                 default=True,
             ),
