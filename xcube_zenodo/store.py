@@ -175,7 +175,7 @@ class ZenodoDataStore(DataStore):
                 default=True,
             ),
             silent=JsonBooleanSchema(
-                title="Switch to visual the preloading process.",
+                title="Switch to visualize the preloading process.",
                 description=(
                     "If False, the preloading progress will be visualized in a table."
                     "If True, the visualization will be suppressed."
