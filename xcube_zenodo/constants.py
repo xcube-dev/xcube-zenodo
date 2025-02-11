@@ -1,5 +1,5 @@
 # The MIT License (MIT)
-# Copyright (c) 2024 by the xcube development team and contributors
+# Copyright (c) 2024-2025 by the xcube development team and contributors
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -21,22 +21,13 @@
 
 import logging
 
-
 DATA_STORE_ID = "zenodo"
 LOG = logging.getLogger("xcube.zenodo")
 CACHE_FOLDER_NAME = "zenodo_cache"
 
-MAP_FILE_EXTENSION_FORMAT = {
-    "zarr": "zarr",
-    "levels": "levels",
-    "nc": "netcdf",
-    "tif": "geotiff",
-    "tiff": "geotiff",
-    "geotiff": "geotiff",
-    "shp": "shapefile",
-    "geojson": "geojson",
-    "zip": "zip",
-    "tar": "tar",
-    "tar.gz": "tar.gz",
-}
-COMPRESSED_FORMATS = list(MAP_FILE_EXTENSION_FORMAT.keys())[-3:]
+# preload specific constants
+COMPRESSED_FORMATS = ["zip", "tar", "tar.gz"]
+DOWNLOAD_FOLDER = "downloads"
+PRELOAD_DOWNLOAD_FRACTION = 0.4
+PRELOAD_DECOMPRESSION_FRACTION = 0.1
+PRELOAD_PROCESSING_FRACTION = 0.5

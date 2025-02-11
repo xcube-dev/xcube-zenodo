@@ -23,7 +23,8 @@ dependencies = [
   "requests",
   "tabulate",
   "xarray",
-  "xcube"
+  "xcube>=1.8.1",
+  "zarr >=2.11,<3"
 ]
 
 [tool.setuptools.dynamic]
@@ -32,15 +33,18 @@ version = {attr = "xcube_zenodo.__version__"}
 [tool.setuptools.packages.find]
 exclude = [
   "test*",
-  "doc*"
+  "doc*",
 ]
 
 [project.optional-dependencies]
 dev = [
   "black",
   "flake8",
+  "isort",
   "pytest",
   "pytest-cov",
+  "pytest-recording",
+  "ruff",
 ]
 
 [project.urls]

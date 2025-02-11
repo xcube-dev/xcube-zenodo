@@ -12,6 +12,48 @@ named `zenodo` to xcube. The data store is used to access datasets which are pub
 on [Zenodo](https://zenodo.org/).
 
 
+## How to use the xcube-zenodo plugin
+
+### Lazy access of datasets published as `tif` or `netcdfs`
+
+To access datasets published on Zenodo, find your dataset on the Zenodo webpage and build
+the data ID with the following structure `"<record_id>/<file_name>"`. For example for 
+the [Canopy height and biomass map for Europe](https://zenodo.org/records/8154445) the
+data ID for the dataset "planet_canopy_cover_30m_v0.1.tif" will be given by
+`"8154445/planet_canopy_cover_30m_v0.1.tif"`. The record ID can be found in the url of 
+the zenodo page. The following few lines of code will lazy load the dataset. 
+
+```python
+from xcube.core.store import new_data_store
+
+store = new_data_store("zenodo")
+ds = store.open_data(
+    "8154445/planet_canopy_cover_30m_v0.1.tif",
+    tile_size=(1024, 1024)
+)
+```
+
+To learn more check out the [example notebook zenodo_data_store.ipynb](examples/zenodo_data_store.ipynb).
+
+
+### Access compressed datasets via the xcube's preload API
+
+If datasets are published as `zip`, `tar`, `tar.gz`, you can use the preload API to
+preload the data into the local or s3 file system. If the compressed file contains
+multiple datasets, the data IDs will be extended by one layer. A short example is shown
+below.
+
+```python
+from xcube.core.store import new_data_store
+
+store = new_data_store("zenodo")
+handler = store.preload_data("13333034/andorra.zip")
+preloaded_data_ids = store.cache_store.list_data_ids()
+ds = store.open_data(preloaded_data_ids[0])
+```
+
+To learn more check out the example notebooks zenodo_data_store_preload*.ipynb in
+[examples](examples).
 
 
 ## Installing the xcube-zenodo plugin
@@ -90,3 +132,19 @@ To produce an HTML
 ```bash
 pytest --cov-report html --cov=xcube_zenodo
 ```
+
+### Some notes on the strategy of unit-testing <a name="unittest_strategy"></a>
+
+The unit test suite uses [pytest-recording](https://pypi.org/project/pytest-recording/)
+to mock https requests via the Python library `requests`. During development an
+actual HTTP request is performed and the responses are saved in `cassettes/**.yaml`
+files. During testing, only the `cassettes/**.yaml` files are used without an actual
+HTTP request. During development, to save the responses to `cassettes/**.yaml`, run
+
+```bash
+pytest -v -s --record-mode new_episodes
+```
+Note that `--record-mode new_episodes` overwrites all cassettes. If one only
+wants to write cassettes which are not saved already, `--record-mode once` can be used.
+[pytest-recording](https://pypi.org/project/pytest-recording/) supports all records modes given by [VCR.py](https://vcrpy.readthedocs.io/en/latest/usage.html#record-modes).
+After recording the cassettes, testing can be then performed as usual.

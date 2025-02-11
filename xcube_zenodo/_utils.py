@@ -1,12 +1,12 @@
 # The MIT License (MIT)
-# Copyright (c) 2024 by the xcube development team and contributors
+# Copyright (c) 2024-2025 by the xcube development team and contributors
 #
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
@@ -21,21 +21,19 @@
 
 from typing import Optional
 
-import fsspec
 
 from .constants import COMPRESSED_FORMATS
-from .constants import MAP_FILE_EXTENSION_FORMAT
 
 
-def identify_file_format(data_id: str) -> Optional[str]:
-    for key, val in MAP_FILE_EXTENSION_FORMAT.items():
-        if data_id.endswith(key.lower()):
-            return val
+def identify_compressed_file_format(data_id: str) -> Optional[str]:
+    for format_id in COMPRESSED_FORMATS:
+        if data_id.endswith(format_id):
+            return format_id
     return None
 
 
 def is_supported_compressed_file_format(data_id: str) -> bool:
-    return identify_file_format(data_id) in COMPRESSED_FORMATS
+    return identify_compressed_file_format(data_id) is not None
 
 
 def translate_data_id2fs_path(data_id: str) -> str:
@@ -47,24 +45,3 @@ def translate_data_id2fs_path(data_id: str) -> str:
 
 def translate_data_id2uri(data_id: str) -> str:
     return f"https://zenodo.org/{translate_data_id2fs_path(data_id)}"
-
-
-def is_zarr_directory(path: str, fs: fsspec.AbstractFileSystem) -> bool:
-    """Check if a directory is a valid Zarr store using fsspec.
-
-    Parameters:
-        path: The path to the directory (local or remote).
-        fs: File system object. Defaults to None.
-
-    Returns:
-        True if the directory is a valid Zarr store, False otherwise.
-    """
-    # Check if the directory exists
-    if not fs.exists(path) or not fs.isdir(path):
-        return False
-
-    # List files in the directory and check for Zarr metadata files
-    files = fs.ls(path)
-    has_zgroup = any(file.endswith(".zgroup") for file in files)
-    has_zarray = any(file.endswith(".zarray") for file in files)
-    return has_zgroup or has_zarray

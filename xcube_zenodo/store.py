@@ -1,12 +1,12 @@
 # The MIT License (MIT)
-# Copyright (c) 2024 by the xcube development team and contributors
+# Copyright (c) 2024-2025 by the xcube development team and contributors
 #
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
@@ -19,16 +19,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import os
-from typing import Tuple, Iterator, Container, Any
+from typing import Any, Container, Iterator, Tuple
 
-import requests
 import xarray as xr
-from xcube.util.jsonschema import (
-    JsonBooleanSchema,
-    JsonObjectSchema,
-    JsonStringSchema,
-)
 from xcube.core.store import (
     DataDescriptor,
     DataStore,
@@ -36,14 +29,12 @@ from xcube.core.store import (
     DataTypeLike,
     new_data_store,
 )
+from xcube.core.store.preload import PreloadHandle
+from xcube.util.jsonschema import JsonBooleanSchema, JsonObjectSchema, JsonStringSchema
 
-from .constants import COMPRESSED_FORMATS
-from .constants import CACHE_FOLDER_NAME
-from .preload import PreloadHandle
-from ._utils import identify_file_format
-from ._utils import is_supported_compressed_file_format
-from ._utils import translate_data_id2fs_path
-from .constants import LOG
+from ._utils import is_supported_compressed_file_format, translate_data_id2fs_path
+from .constants import CACHE_FOLDER_NAME, LOG
+from .preload import ZenodoPreloadHandle
 
 
 class ZenodoDataStore(DataStore):
@@ -142,17 +133,10 @@ class ZenodoDataStore(DataStore):
     def open_data(
         self, data_id: str, opener_id: str = None, **open_params
     ) -> xr.Dataset:
-        format_id = identify_file_format(data_id)
-        if format_id in COMPRESSED_FORMATS:
-            if not self.cache_store.has_data(data_id):
-                raise DataStoreError(
-                    f"The dataset {data_id} is stored in a compressed format. "
-                    f"Please use store.preload_data({data_id}) first."
-                )
-            return self.cache_store.open_data(
-                data_id=data_id,
-                opener_id=f"dataset:zarr:{self.cache_store.protocol}",
-                **open_params,
+        if is_supported_compressed_file_format(data_id):
+            raise DataStoreError(
+                f"The dataset {data_id} is stored in a compressed format. "
+                f"Please use store.preload_data({data_id!r}) first."
             )
         elif self.cache_store.has_data(data_id):
             return self.cache_store.open_data(data_id=data_id, **open_params)
@@ -163,56 +147,39 @@ class ZenodoDataStore(DataStore):
             )
 
     def preload_data(self, *data_ids: str, **preload_params) -> PreloadHandle:
+
         schema = self.get_preload_data_params()
         schema.validate_instance(preload_params)
-        preload_params["merge"] = preload_params.get("merge", False)
-        preload_params["monitor_preload"] = preload_params.get("monitor_preload", True)
         data_ids_sel = []
         for data_id in data_ids:
-            format_id = identify_file_format(data_id)
-            data_id_mod = data_id.replace(f".{format_id}", "/")
-            list_data_ids = self.cache_store.list_data_ids()
-            list_data_ids_mod = [i for i in list_data_ids if data_id_mod in i]
-            if list_data_ids_mod:
-                LOG.info(
-                    f"{data_id} is already pre-loaded. The datasets can be "
-                    f"opened with the following data IDs: "
-                    f"\n{'\n'.join(str(item) for item in list_data_ids_mod)}"
-                )
-            elif self.cache_store.has_data(data_id):
-                LOG.info(f"{data_id} is already pre-loaded.")
+            if is_supported_compressed_file_format(data_id):
+                data_ids_sel.append(data_id)
             else:
-                if is_supported_compressed_file_format(data_id):
-                    data_ids_sel.append(data_id)
-                else:
-                    LOG.warning(
-                        f"{data_id} cannot be preloaded. Only 'zip', 'tar', and "
-                        "'tar.gz' compressed files are supported. The preload "
-                        "request is discarded."
-                    )
-        preload_handle = PreloadHandle(
+                LOG.warning(
+                    f"{data_id} cannot be preloaded. Only 'zip', 'tar', and "
+                    "'tar.gz' compressed files are supported. The preload "
+                    "request is discarded."
+                )
+        return ZenodoPreloadHandle(
             self.cache_store,
             *data_ids_sel,
             **preload_params,
         )
-        if data_ids_sel:
-            preload_handle.preload_data(*data_ids_sel, **preload_params)
-        return preload_handle
 
     def get_preload_data_params(self) -> JsonObjectSchema:
         params = dict(
-            merge=JsonBooleanSchema(
-                title="Merge multiple dataset of compressed data IDs.",
-                description=(
-                    "If True, xarray.merge is applied to the files stored in a "
-                    "compressed format. If False, each dataset is stored individually. "
-                    "The data ID will be extended by the filename."
-                ),
-                default=False,
+            blocking=JsonBooleanSchema(
+                title="Switch to make the preloading process blocking or "
+                "non-blocking",
+                description="If True, the preloading process blocks the script.",
+                default=True,
             ),
-            monitor_preload=JsonBooleanSchema(
-                title="Monitor preload_data method.",
-                description="If True, the progress of preload will be visualized",
+            silent=JsonBooleanSchema(
+                title="Switch to visualize the preloading process.",
+                description=(
+                    "If False, the preloading progress will be visualized in a table."
+                    "If True, the visualization will be suppressed."
+                ),
                 default=True,
             ),
         )
