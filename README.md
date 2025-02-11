@@ -16,7 +16,7 @@ on [Zenodo](https://zenodo.org/).
 
 ### Lazy access of datasets published as `tif` or `netcdfs`
 
-To access datasets publish on Zenodo, find your dataset on the Zenodo webpage and build
+To access datasets published on Zenodo, find your dataset on the Zenodo webpage and build
 the data ID with the following structure `"<record_id>/<file_name>"`. For example for 
 the [Canopy height and biomass map for Europe](https://zenodo.org/records/8154445) the
 data ID for the dataset "planet_canopy_cover_30m_v0.1.tif" will be given by
