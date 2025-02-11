@@ -19,8 +19,8 @@
   making it impractical to crawl through all records. Removing reliance on the
   Zenodo API also eliminates the need for an access token, simplifying the setup
   of the store.
-* The preload API of xcube, relesed in [xcube=1.8.0](https://github.com/xcube-dev/xcube/releases/tag/v1.8.0),
-  is now used to ensure consistence with other xcube data store plugins. 
+* The preload API of xcube, released in [xcube=1.8.0](https://github.com/xcube-dev/xcube/releases/tag/v1.8.0),
+  is now used to ensure consistency with other xcube data store plugins. 
 
 
 ## Changes in 0.1.0
