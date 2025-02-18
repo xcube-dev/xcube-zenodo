@@ -105,12 +105,12 @@ do so as follows:
 ```bash
 mamba create --name xcube-zenodo --channel conda-forge --only-deps xcube-zenodo
 mamba activate xcube-zenodo
-git clone https://github.com/dcs4cop/xcube-cds.git
+git clone https://github.com/xcube-dev/xcube-zenodo.git
 python -m pip install --no-deps --editable xcube-zenodo/
 ```
 
 This installs all the dependencies of xcube-zenodo into a fresh conda environment,
-then installs xcube-cds into this environment from the repository.
+then installs xcube-zenodo into this environment from the repository.
 
 ## Testing <a name="testing"></a>
 
