@@ -1,5 +1,9 @@
 ## Changes in 0.1.2 (in development)
 
+### Enhancements
+
+* The data store now supports preloading nested compressed files, including those 
+  with multiple directory levels within the archive.
 
 ## Changes in 0.1.1
 
