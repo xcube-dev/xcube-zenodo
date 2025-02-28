@@ -142,10 +142,10 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
         format_ext = identify_compressed_file_format(data_id)
         data_id_mod = data_id.replace(f".{format_ext}", "")
         extract_dir = self._cache_fs.sep.join([self._download_folder, data_id_mod])
-        sub_files = self._cache_fs.find(extract_dir, detail=True)
-        total_size = sum([sub_file["size"] for sub_file in sub_files.values()])
+        sub_files = recursive_listdir(self._cache_fs, extract_dir)
+        total_size = sum([sub_file["size"] for sub_file in sub_files])
         size_count = 0
-        for sub_file in sub_files.values():
+        for sub_file in sub_files:
             sub_data_id = sub_file["name"].replace(f"{self._cache_root}/", "")
             if self._cache_store.has_data(sub_data_id):
                 ds = self._cache_store.open_data(sub_data_id)
@@ -186,3 +186,19 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
 def _check_requests_response(response: requests.Response) -> None:
     if not response.ok:
         raise DataStoreError(response.raise_for_status())
+
+
+def recursive_listdir(fs: fsspec.AbstractFileSystem, path: str) -> list:
+    items = fs.listdir(path)
+    files = []
+
+    for item in items:
+        if item["type"] == "directory":
+            if fs.exists(f"{item['name']}/.zattrs"):
+                files.append(item)
+            else:
+                files.extend(recursive_listdir(fs, item["name"]))
+        else:
+            files.append(item)
+
+    return files
