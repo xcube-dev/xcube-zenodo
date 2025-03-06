@@ -28,7 +28,7 @@ import requests
 from xcube.core.store import DataStoreError, MutableDataStore
 from xcube.core.store.preload import ExecutorPreloadHandle, PreloadState, PreloadStatus
 
-from ._utils import identify_compressed_file_format, translate_data_id2uri
+from .utils import identify_compressed_file_format, translate_data_id2uri
 from .constants import (
     DOWNLOAD_FOLDER,
     PRELOAD_DECOMPRESSION_FRACTION,

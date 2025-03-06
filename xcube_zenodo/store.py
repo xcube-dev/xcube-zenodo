@@ -21,6 +21,7 @@
 
 from typing import Any, Container, Iterator, Tuple
 
+import requests
 import xarray as xr
 from xcube.core.store import (
     DataDescriptor,
@@ -32,8 +33,13 @@ from xcube.core.store import (
 from xcube.core.store.preload import PreloadHandle
 from xcube.util.jsonschema import JsonBooleanSchema, JsonObjectSchema, JsonStringSchema
 
-from ._utils import is_supported_compressed_file_format, translate_data_id2fs_path
-from .constants import CACHE_FOLDER_NAME, LOG
+from .utils import (
+    is_supported_compressed_file_format,
+    translate_data_id2fs_path,
+    stack_along_time,
+    is_valid_record_id,
+)
+from .constants import CACHE_FOLDER_NAME, LOG, ZENODO_OPEN_SCHEMA
 from .preload import ZenodoPreloadHandle
 
 
@@ -126,13 +132,16 @@ class ZenodoDataStore(DataStore):
             uri = translate_data_id2fs_path(data_id)
         else:
             uri = data_id
-        return self._https_data_store.get_open_data_params_schema(
+        schema = self._https_data_store.get_open_data_params_schema(
             data_id=uri, opener_id=opener_id
         )
+        return schema.properties.update(ZENODO_OPEN_SCHEMA)
 
     def open_data(
         self, data_id: str, opener_id: str = None, **open_params
     ) -> xr.Dataset:
+        schema = self.get_open_data_params_schema(data_id=data_id, opener_id=opener_id)
+        schema.validate_instance(open_params)
         if is_supported_compressed_file_format(data_id):
             raise DataStoreError(
                 f"The dataset {data_id} is stored in a compressed format. "
@@ -140,6 +149,15 @@ class ZenodoDataStore(DataStore):
             )
         elif self.cache_store.has_data(data_id):
             return self.cache_store.open_data(data_id=data_id, **open_params)
+        elif is_valid_record_id(data_id):
+            try:
+                return self._open_multiple_files(data_id, **open_params)
+            except Exception as e:
+                raise DataStoreError(
+                    f"Failed to open all files contained in record ID {data_id}. "
+                    "You can try opening individual files by setting the data ID to "
+                    f"'{data_id}/<file_name>'. Error details: {str(e)}"
+                )
         else:
             uri = translate_data_id2fs_path(data_id)
             return self._https_data_store.open_data(
@@ -203,3 +221,41 @@ class ZenodoDataStore(DataStore):
             required=[],
             additional_properties=False,
         )
+
+    def _open_multiple_files(self, record_id: str, **open_params) -> xr.Dataset:
+        if "file_names" in open_params:
+            data_ids = [
+                f"{record_id}/{file_name}" for file_name in open_params["file_names"]
+            ]
+        else:
+            url = f"https://zenodo.org/api/records/{record_id}"
+            response = requests.get(url)
+            data = response.json()
+            files = data.get("files", [])
+            data_ids = [f"{record_id}/{file['key']}" for file in files]
+        dss = []
+        for data_id in data_ids:
+            try:
+                ds = self.open_data(data_id, **open_params)
+            except DataStoreError as e:
+                LOG.debug(
+                    f"Skipping data_id '{data_id}' due to an error while opening: {e}"
+                )
+                continue
+            record, file_name = data_id.split("/")
+            file_key = ".".join(file_name.split(".")[:-1])
+            if len(ds.data_vars) == 1:
+                name_dict = {list(ds.data_vars)[0]: file_key}
+            else:
+                name_dict = {
+                    var_name: f"{file_key}_{var_name}"
+                    for var_name in ds.data_vars.keys()
+                }
+            ds = ds.rename_vars(name_dict=name_dict)
+            dss.append(ds)
+
+        if open_params.get("stack_along_time", False):
+            ds = stack_along_time(dss, open_params.get("time_axis", None))
+        else:
+            ds = xr.merge(dss, **open_params.get("xr_merge_params", {}))
+        return ds

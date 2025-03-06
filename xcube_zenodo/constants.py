@@ -21,6 +21,8 @@
 
 import logging
 
+from xcube.util.jsonschema import JsonArraySchema, JsonBooleanSchema, JsonStringSchema
+
 DATA_STORE_ID = "zenodo"
 LOG = logging.getLogger("xcube.zenodo")
 CACHE_FOLDER_NAME = "zenodo_cache"
@@ -31,3 +33,17 @@ DOWNLOAD_FOLDER = "downloads"
 PRELOAD_DOWNLOAD_FRACTION = 0.4
 PRELOAD_DECOMPRESSION_FRACTION = 0.1
 PRELOAD_PROCESSING_FRACTION = 0.5
+
+# parameter schemas
+ZENODO_OPEN_SCHEMA = dict(
+    file_names=JsonArraySchema(
+        title="List of files name as given on the webpage of a given Zenodo record",
+        items=JsonStringSchema(title="File name in a Zenodo record"),
+    ),
+    stack_along_time=JsonBooleanSchema(
+        title="Switch to stack multiple files along a time axis", default=False
+    ),
+    time_axis=JsonArraySchema(
+        title="Time axis to be assigned when `stack_along_time=True`", default=None
+    ),
+)

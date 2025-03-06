@@ -21,6 +21,8 @@
 
 from typing import Optional
 
+import xarray as xr
+import numpy as np
 
 from .constants import COMPRESSED_FORMATS
 
@@ -45,3 +47,16 @@ def translate_data_id2fs_path(data_id: str) -> str:
 
 def translate_data_id2uri(data_id: str) -> str:
     return f"https://zenodo.org/{translate_data_id2fs_path(data_id)}"
+
+
+def is_valid_record_id(record_id: str) -> bool:
+    return record_id.isdigit() and int(record_id) > 0
+
+
+def stack_along_time(
+    list_ds: list[xr.Dataset], time_axis: list | np.ndarray | xr.DataArray = None
+) -> xr.Dataset:
+    ds = xr.concat(list_ds, dim="time", join="exact")
+    if time_axis is not None:
+        ds = ds.assign_coords(coords=dict(time=time_axis))
+    return ds
