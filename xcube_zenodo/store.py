@@ -49,7 +49,7 @@ class ZenodoDataStore(DataStore):
         self._https_data_store = new_data_store("https", root="zenodo.org")
         if cache_store_params is None:
             cache_store_params = dict(root=CACHE_FOLDER_NAME)
-        cache_store_params["max_depth"] = cache_store_params.pop("max_depth", 3)
+        cache_store_params["max_depth"] = cache_store_params.pop("max_depth", 10)
         self.cache_store = new_data_store(cache_store_id, **cache_store_params)
 
     @classmethod
@@ -68,7 +68,7 @@ class ZenodoDataStore(DataStore):
                     "Store parameters of a filesystem-based data store"
                     "implemented in xcube."
                 ),
-                default=dict(root=CACHE_FOLDER_NAME, max_depth=3),
+                default=dict(root=CACHE_FOLDER_NAME, max_depth=10),
             ),
         )
         return JsonObjectSchema(
