@@ -1,4 +1,14 @@
-## Changes in 0.1.2 (in development)
+## Changes in 1.0.0 (In Development)
+
+### Major Changes
+* The `ZenodoDataStore` class now requires a `root` parameter during initialization,
+  which represents the Zenodo record ID. This means each instance of `ZenodoDataStore`
+  corresponds to a single Zenodo record as its data source. The data id are then
+  equivalent to the filenames given in one record.   
+* The `preload_data` method now returns a store containing the preloaded data. After
+  preloading, the returned store may be used to access the data.
+* If no data IDs are provided in the preload_data method, all compressed datasets in 
+  the Zenodo record will be preloaded.
 
 ### Enhancements
 
