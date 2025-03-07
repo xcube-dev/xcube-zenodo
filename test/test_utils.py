@@ -21,7 +21,6 @@
 
 import unittest
 
-
 from xcube_zenodo._utils import (
     identify_compressed_file_format,
     is_supported_compressed_file_format,

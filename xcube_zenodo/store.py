@@ -28,10 +28,10 @@ from xcube.core.store import (
     DataStore,
     DataStoreError,
     DataTypeLike,
+    PreloadDataStore,
     new_data_store,
 )
 from xcube.util.jsonschema import JsonBooleanSchema, JsonObjectSchema, JsonStringSchema
-from xcube.core.store import PreloadDataStore
 
 from ._utils import is_supported_compressed_file_format
 from .constants import CACHE_FOLDER_NAME, LOG
