@@ -21,7 +21,6 @@
 
 from typing import Optional
 
-
 from .constants import COMPRESSED_FORMATS
 
 
@@ -34,14 +33,3 @@ def identify_compressed_file_format(data_id: str) -> Optional[str]:
 
 def is_supported_compressed_file_format(data_id: str) -> bool:
     return identify_compressed_file_format(data_id) is not None
-
-
-def translate_data_id2fs_path(data_id: str) -> str:
-    components = data_id.split("/")
-    record_id = components[0]
-    file_key = "/".join(components[1:])
-    return f"records/{record_id}/files/{file_key}"
-
-
-def translate_data_id2uri(data_id: str) -> str:
-    return f"https://zenodo.org/{translate_data_id2fs_path(data_id)}"

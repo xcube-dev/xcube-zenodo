@@ -25,7 +25,6 @@ import unittest
 from xcube_zenodo._utils import (
     identify_compressed_file_format,
     is_supported_compressed_file_format,
-    translate_data_id2uri,
 )
 
 
@@ -44,7 +43,3 @@ class UtilsTest(unittest.TestCase):
         self.assertTrue(is_supported_compressed_file_format("1234567/test.tar"))
         self.assertTrue(is_supported_compressed_file_format("1234567/test.tar.gz"))
         self.assertFalse(is_supported_compressed_file_format("1234567/test.zarr"))
-
-    def test_translate_data_id2uri(self):
-        test_uri = translate_data_id2uri("1234567/test.tif")
-        self.assertEqual("https://zenodo.org/records/1234567/files/test.tif", test_uri)

@@ -21,7 +21,7 @@
 
 import shutil
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import numpy as np
 import pytest
@@ -42,7 +42,8 @@ from xcube_zenodo.constants import DATA_STORE_ID
 class ZenodoDataStoreTest(unittest.TestCase):
 
     def setUp(self):
-        self.data_id_tif = "1000000/test.tif"
+        self.record_id = "1000000"
+        self.data_id_tif = "test.tif"
         self.mock_dataset = xr.Dataset(
             {
                 "temperature": (("time", "x", "y"), np.random.rand(5, 5, 5)),
@@ -59,7 +60,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
         self.assertNotIn("cache_store_params", schema.required)
 
     def test_get_data_types(self):
-        store = new_data_store(DATA_STORE_ID)
+        store = new_data_store(DATA_STORE_ID, root=self.record_id)
         self.assertCountEqual(
             ("dataset", "mldataset", "geodataframe"), store.get_data_types()
         )
@@ -67,49 +68,59 @@ class ZenodoDataStoreTest(unittest.TestCase):
     @patch("xcube.core.store.fs.store.BaseFsDataStore.get_data_types_for_data")
     def test_get_data_types_for_data(self, mock_get_data_types):
         mock_get_data_types.return_value = ("dataset", "mldataset")
-        store = new_data_store(DATA_STORE_ID)
+        store = new_data_store(DATA_STORE_ID, root=self.record_id)
         self.assertCountEqual(
             ("dataset", "mldataset"),
             store.get_data_types_for_data(self.data_id_tif),
         )
-        mock_get_data_types.assert_called_once_with("records/1000000/files/test.tif")
+        mock_get_data_types.assert_called_once_with("test.tif")
 
-    def test_get_data_ids(self):
-        store = new_data_store(DATA_STORE_ID)
-        with self.assertRaises(DataStoreError) as cm:
-            store.get_data_ids()
-        self.assertEqual(
-            (
-                "`get_data_ids` is not supported because Zenodo hosts all types of "
-                "research, making it unhelpful to crawl through all records."
-            ),
-            f"{cm.exception}",
+    @patch("requests.get")
+    def test_get_data_ids(self, mock_get):
+        # Mock response from Zenodo API
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "files": [
+                {"key": "planet_canopy_cover_30m_v0.1.tif"},
+                {"key": "planet_agb_30m_v0.1.tif"},
+                {"key": "planet_canopy_height_30m_v0.1.tif"},
+            ]
+        }
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+        store = new_data_store(DATA_STORE_ID, root="8154445")
+        # Mock the internal `_https_data_store.has_data` to always return True
+        store._https_data_store.has_data = lambda key: True
+
+        self.assertCountEqual(
+            [
+                "planet_canopy_cover_30m_v0.1.tif",
+                "planet_agb_30m_v0.1.tif",
+                "planet_canopy_height_30m_v0.1.tif",
+            ],
+            store.get_data_ids(),
         )
 
     @patch("xcube.core.store.fs.store.BaseFsDataStore.has_data")
     def test_has_data(self, mock_has_data):
         mock_has_data.return_value = True
 
-        store = new_data_store(DATA_STORE_ID)
+        store = new_data_store(DATA_STORE_ID, root=self.record_id)
         self.assertTrue(store.has_data(self.data_id_tif))
-        mock_has_data.assert_called_once_with(
-            data_id="records/1000000/files/test.tif", data_type=None
-        )
+        mock_has_data.assert_called_once_with(data_id="test.tif", data_type=None)
 
     @patch("xcube.core.store.fs.store.BaseFsDataStore.describe_data")
     def test_describe_data(self, mock_describe_data):
         mock_describe_data.return_value = DatasetDescriptor(data_id=self.data_id_tif)
-        store = new_data_store(DATA_STORE_ID)
+        store = new_data_store(DATA_STORE_ID, root=self.record_id)
         descriptor = store.describe_data(self.data_id_tif)
         expected_descriptor = {"data_id": self.data_id_tif, "data_type": "dataset"}
         self.assertIsInstance(descriptor, DatasetDescriptor)
         self.assertDictEqual(expected_descriptor, descriptor.to_dict())
-        mock_describe_data.assert_called_once_with(
-            data_id="records/1000000/files/test.tif", data_type=None
-        )
+        mock_describe_data.assert_called_once_with(data_id="test.tif", data_type=None)
 
     def test_get_data_opener_ids(self):
-        store = new_data_store(DATA_STORE_ID)
+        store = new_data_store(DATA_STORE_ID, root=self.record_id)
         self.assertCountEqual(
             (
                 "dataset:netcdf:https",
@@ -137,7 +148,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
         )
 
     def test_get_open_data_params_schema(self):
-        store = new_data_store(DATA_STORE_ID)
+        store = new_data_store(DATA_STORE_ID, root=self.record_id)
         schema = store.get_open_data_params_schema()
         self.assertIsInstance(schema, JsonObjectSchema)
         self.assertIn("log_access", schema.properties)
@@ -161,19 +172,17 @@ class ZenodoDataStoreTest(unittest.TestCase):
     @patch("xcube.core.store.fs.store.BaseFsDataStore.open_data")
     def test_open_data(self, mock_open_data):
         mock_open_data.return_value = self.mock_dataset
-        store = new_data_store(DATA_STORE_ID)
+        store = new_data_store(DATA_STORE_ID, root=self.record_id)
 
         ds = store.open_data(data_id=self.data_id_tif)
         self.assertIsInstance(ds, xr.Dataset)
         self.assertCountEqual(["temperature", "precipitation"], list(ds.data_vars))
         self.assertEqual((5, 5, 5), ds["temperature"].shape)
         self.assertEqual((5, 5, 5), ds["precipitation"].shape)
-        mock_open_data.assert_called_once_with(
-            data_id="records/1000000/files/test.tif", opener_id=None
-        )
+        mock_open_data.assert_called_once_with(data_id="test.tif", opener_id=None)
 
     def test_open_data_compressed_format_not_preloaded(self):
-        store = new_data_store(DATA_STORE_ID)
+        store = new_data_store(DATA_STORE_ID, root=self.record_id)
 
         with self.assertRaises(DataStoreError) as cm:
             _ = store.open_data(data_id="1234567/test.zip")
@@ -185,31 +194,14 @@ class ZenodoDataStoreTest(unittest.TestCase):
             f"{cm.exception}",
         )
 
-    @patch("xcube.core.store.fs.store.BaseFsDataStore.open_data")
-    @patch("xcube.core.store.fs.store.BaseFsDataStore.has_data")
-    def test_open_data_compressed_format_preloaded(self, mock_has_data, mock_open_data):
-        mock_has_data.return_value = True
-        mock_open_data.return_value = self.mock_dataset
-        store = new_data_store(DATA_STORE_ID)
-        ds = store.open_data("1234567/test.zarr")
-        self.assertIsInstance(ds, xr.Dataset)
-        self.assertCountEqual(["temperature", "precipitation"], list(ds.data_vars))
-        self.assertEqual((5, 5, 5), ds["temperature"].shape)
-        self.assertEqual((5, 5, 5), ds["precipitation"].shape)
-        mock_has_data.assert_called_once_with("1234567/test.zarr")
-        mock_open_data.assert_called_once_with(data_id="1234567/test.zarr")
-
     @pytest.mark.vcr()
     def test_preload_data_tar_gz(self):
-        store = new_data_store(DATA_STORE_ID)
-        data_id = "6453099/diaz2016_inputs_raw.zarr.tar.gz"
-        handle = store.preload_data(data_id, blocking=True, silent=True)
-        handle.close()
+        store = new_data_store(DATA_STORE_ID, root="6453099")
+        cache_store = store.preload_data(blocking=True, silent=True)
+        cache_store.preload_handle.close()
 
-        self.assertCountEqual(
-            ["6453099/diaz2016_inputs_raw.zarr"], store.cache_store.list_data_ids()
-        )
-        ds = store.open_data("6453099/diaz2016_inputs_raw.zarr")
+        self.assertCountEqual(["diaz2016_inputs_raw.zarr"], cache_store.list_data_ids())
+        ds = cache_store.open_data("diaz2016_inputs_raw.zarr")
         self.assertIsInstance(ds, xr.Dataset)
         self.assertEqual(
             {
@@ -226,56 +218,53 @@ class ZenodoDataStoreTest(unittest.TestCase):
             },
             ds.sizes,
         )
-        shutil.rmtree(store.cache_store.root)
+        shutil.rmtree(cache_store.root)
 
     @pytest.mark.vcr()
     def test_preload_data_zip(self):
-        store = new_data_store(DATA_STORE_ID)
-        data_ids = (
-            "13333034/andorra.zip",
-            "13333034/invalid_data_id.tif",
-        )
+        store = new_data_store(DATA_STORE_ID, root="13333034")
+        data_ids = ("andorra.zip", "invalid_data_id.tif")
 
         with self.assertLogs("xcube.zenodo", level="WARNING") as cm:
-            handle = store.preload_data(*data_ids, blocking=True, silent=True)
+            cache_store = store.preload_data(*data_ids, blocking=True, silent=True)
         self.assertEqual(1, len(cm.output))
         msg = (
-            "WARNING:xcube.zenodo:13333034/invalid_data_id.tif cannot be preloaded. "
+            "WARNING:xcube.zenodo:invalid_data_id.tif cannot be preloaded. "
             "Only 'zip', 'tar', and 'tar.gz' compressed files are supported. The "
             "preload request is discarded."
         )
         self.assertEqual(msg, str(cm.output[-1]))
-        handle.close()
+        cache_store.preload_handle.close()
 
         self.assertCountEqual(
             [
-                "13333034/andorra/disturbance_severity_1985_2023_andorra.zarr",
-                "13333034/andorra/number_disturbances_andorra.zarr",
-                "13333034/andorra/disturbance_agent_1985_2023_andorra.zarr",
-                "13333034/andorra/annual_disturbances_1985_2023_andorra.zarr",
-                "13333034/andorra/latest_disturbance_andorra.zarr",
-                "13333034/andorra/disturbance_probability_1985_2023_andorra.zarr",
-                "13333034/andorra/disturbance_agent_aggregated_andorra.zarr",
-                "13333034/andorra/forest_mask_andorra.zarr",
-                "13333034/andorra/greatest_disturbance_andorra.zarr",
+                "andorra/disturbance_severity_1985_2023_andorra.zarr",
+                "andorra/number_disturbances_andorra.zarr",
+                "andorra/disturbance_agent_1985_2023_andorra.zarr",
+                "andorra/annual_disturbances_1985_2023_andorra.zarr",
+                "andorra/latest_disturbance_andorra.zarr",
+                "andorra/disturbance_probability_1985_2023_andorra.zarr",
+                "andorra/disturbance_agent_aggregated_andorra.zarr",
+                "andorra/forest_mask_andorra.zarr",
+                "andorra/greatest_disturbance_andorra.zarr",
             ],
-            store.cache_store.list_data_ids(),
+            cache_store.list_data_ids(),
         )
-        ds = store.open_data(
-            "13333034/andorra/disturbance_probability_1985_2023_andorra.zarr"
+        ds = cache_store.open_data(
+            "andorra/disturbance_probability_1985_2023_andorra.zarr"
         )
         self.assertIsInstance(ds, xr.Dataset)
         self.assertCountEqual([f"band_{i}" for i in range(1, 40)], list(ds.data_vars))
         self.assertEqual(ds["band_1"].shape, (971, 1149))
-        shutil.rmtree(store.cache_store.root)
+        shutil.rmtree(cache_store.root)
 
     @pytest.mark.vcr()
     def test_preload_data_download_fails(self):
-        store = new_data_store(DATA_STORE_ID)
-        data_ids = "13333034/andorra_invalid.zip"
+        store = new_data_store(DATA_STORE_ID, root="13333034")
+        data_ids = "andorra_invalid.zip"
 
-        handle = store.preload_data(data_ids, silent=True)
-        state = handle._states[data_ids]
+        cache_store = store.preload_data(data_ids, silent=True)
+        state = cache_store.preload_handle._states[data_ids]
         self.assertEqual(PreloadStatus.failed, state.status)
         self.assertIsInstance(state.exception, requests.exceptions.HTTPError)
         self.assertEqual(
@@ -285,7 +274,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
         )
 
     def test_search_data(self):
-        store = new_data_store(DATA_STORE_ID)
+        store = new_data_store(DATA_STORE_ID, root=self.record_id)
         with self.assertRaises(NotImplementedError) as context:
             store.search_data()
         self.assertEqual(
