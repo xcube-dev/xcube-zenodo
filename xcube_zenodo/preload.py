@@ -25,7 +25,7 @@ import zipfile
 
 import fsspec
 import requests
-from xcube.core.store import DataStoreError, PreloadDataStore
+from xcube.core.store import DataStoreError, PreloadedDataStore
 from xcube.core.store.preload import ExecutorPreloadHandle, PreloadState, PreloadStatus
 
 from ._utils import identify_compressed_file_format
@@ -39,7 +39,9 @@ from .constants import (
 
 class ZenodoPreloadHandle(ExecutorPreloadHandle):
 
-    def __init__(self, cache_store: PreloadDataStore, *data_ids: str, **preload_params):
+    def __init__(
+        self, cache_store: PreloadedDataStore, *data_ids: str, **preload_params
+    ):
         self._cache_store = cache_store
         self._cache_fs: fsspec.AbstractFileSystem = cache_store.fs
         self._cache_root = cache_store.root

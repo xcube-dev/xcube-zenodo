@@ -28,7 +28,7 @@ from xcube.core.store import (
     DataStore,
     DataStoreError,
     DataTypeLike,
-    PreloadDataStore,
+    PreloadedDataStore,
     new_data_store,
 )
 from xcube.util.jsonschema import JsonBooleanSchema, JsonObjectSchema, JsonStringSchema
@@ -54,7 +54,7 @@ class ZenodoDataStore(DataStore):
         if cache_store_params is None:
             cache_store_params = dict(root=f"{CACHE_FOLDER_NAME}/{root}")
         cache_store_params["max_depth"] = cache_store_params.pop("max_depth", 10)
-        self.cache_store: PreloadDataStore = new_data_store(
+        self.cache_store: PreloadedDataStore = new_data_store(
             cache_store_id, **cache_store_params
         )
 
@@ -140,7 +140,7 @@ class ZenodoDataStore(DataStore):
                 data_id=data_id, opener_id=opener_id, **open_params
             )
 
-    def preload_data(self, *data_ids: str, **preload_params) -> PreloadDataStore:
+    def preload_data(self, *data_ids: str, **preload_params) -> PreloadedDataStore:
         schema = self.get_preload_data_params()
         schema.validate_instance(preload_params)
 

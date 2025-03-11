@@ -21,7 +21,7 @@ jobs:
       - name: Install xcube from GitHub
         shell: bash -l {0}
         run: |
-          pip install git+https://github.com/xcube-dev/xcube.git@konstntokas-1132-return_cache_store_preload
+          pip install git+https://github.com/xcube-dev/xcube.git
 
       - name: Run unit tests
         shell: bash -l {0}
