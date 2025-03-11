@@ -16,19 +16,19 @@ on [Zenodo](https://zenodo.org/).
 
 ### Lazy access of datasets published as `tif` or `netcdfs`
 
-To access datasets published on Zenodo, find your dataset on the Zenodo webpage and build
-the data ID with the following structure `"<record_id>/<file_name>"`. For example for 
-the [Canopy height and biomass map for Europe](https://zenodo.org/records/8154445) the
-data ID for the dataset "planet_canopy_cover_30m_v0.1.tif" will be given by
-`"8154445/planet_canopy_cover_30m_v0.1.tif"`. The record ID can be found in the url of 
-the zenodo page. The following few lines of code will lazy load the dataset. 
+To access datasets published on Zenodo, locate the **record ID** in the URL of the 
+respective Zenodo webpage. This ID is required when initializing the Zenodo data store.  
+
+For example, the record ID for the [Canopy height and biomass map for Europe](https://zenodo.org/records/8154445)
+is `"8154445"`. To access the dataset `"planet_canopy_cover_30m_v0.1.tif"`, the
+following code snippet will **lazy-load** the dataset:
 
 ```python
 from xcube.core.store import new_data_store
 
-store = new_data_store("zenodo")
+store = new_data_store("zenodo", "8154445")
 ds = store.open_data(
-    "8154445/planet_canopy_cover_30m_v0.1.tif",
+    "planet_canopy_cover_30m_v0.1.tif",
     tile_size=(1024, 1024)
 )
 ```
@@ -46,9 +46,9 @@ below.
 ```python
 from xcube.core.store import new_data_store
 
-store = new_data_store("zenodo")
-handler = store.preload_data("13333034/andorra.zip")
-preloaded_data_ids = store.cache_store.list_data_ids()
+store = new_data_store("zenodo", root="13333034")
+cache_store = store.preload_data("andorra.zip")
+preloaded_data_ids = cache_store.list_data_ids()
 ds = store.open_data(preloaded_data_ids[0])
 ```
 

@@ -17,6 +17,12 @@ jobs:
         with:
           environment-file: environment.yml
 
+      # quick and dirty, will be removed once changes of preload api are released
+      - name: Install xcube from GitHub
+        shell: bash -l {0}
+        run: |
+          pip install git+https://github.com/xcube-dev/xcube.git
+
       - name: Run unit tests
         shell: bash -l {0}
         run: |
