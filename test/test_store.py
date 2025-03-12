@@ -84,6 +84,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
                 {"key": "planet_canopy_cover_30m_v0.1.tif"},
                 {"key": "planet_agb_30m_v0.1.tif"},
                 {"key": "planet_canopy_height_30m_v0.1.tif"},
+                {"key": "planet_canopy_height_30m_v0.1.zip"},
             ]
         }
         mock_response.status_code = 200
@@ -97,6 +98,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
                 "planet_canopy_cover_30m_v0.1.tif",
                 "planet_agb_30m_v0.1.tif",
                 "planet_canopy_height_30m_v0.1.tif",
+                "planet_canopy_height_30m_v0.1.zip",
             ],
             store.get_data_ids(),
         )
