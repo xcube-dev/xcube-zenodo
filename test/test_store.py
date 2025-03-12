@@ -84,7 +84,6 @@ class ZenodoDataStoreTest(unittest.TestCase):
                 {"key": "planet_canopy_cover_30m_v0.1.tif"},
                 {"key": "planet_agb_30m_v0.1.tif"},
                 {"key": "planet_canopy_height_30m_v0.1.tif"},
-                {"key": "planet_canopy_height_30m_v0.1.zip"},
             ]
         }
         mock_response.status_code = 200
@@ -98,7 +97,30 @@ class ZenodoDataStoreTest(unittest.TestCase):
                 "planet_canopy_cover_30m_v0.1.tif",
                 "planet_agb_30m_v0.1.tif",
                 "planet_canopy_height_30m_v0.1.tif",
-                "planet_canopy_height_30m_v0.1.zip",
+            ],
+            store.get_data_ids(),
+        )
+
+    @patch("requests.get")
+    def test_get_data_ids_compressed(self, mock_get):
+        # Mock response from Zenodo API
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "files": [
+                {"key": "planet_canopy_cover_30m_v0.1.zip"},
+                {"key": "planet_agb_30m_v0.1.tar"},
+                {"key": "planet_canopy_height_30m_v0.1.tar.gz"},
+            ]
+        }
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+        store = new_data_store(DATA_STORE_ID, root="8154445")
+
+        self.assertCountEqual(
+            [
+                "planet_canopy_cover_30m_v0.1.zip",
+                "planet_agb_30m_v0.1.tar",
+                "planet_canopy_height_30m_v0.1.tar.gz",
             ],
             store.get_data_ids(),
         )
