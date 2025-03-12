@@ -102,6 +102,8 @@ class ZenodoDataStore(DataStore):
         for file in files:
             if self._https_data_store.has_data(file["key"]):
                 yield file["key"]
+            elif is_supported_compressed_file_format(file["key"]):
+                yield file["key"]
 
     def has_data(self, data_id: str, data_type: str = None) -> bool:
         return self._https_data_store.has_data(data_id=data_id, data_type=data_type)
