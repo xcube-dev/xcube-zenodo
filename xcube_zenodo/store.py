@@ -100,7 +100,9 @@ class ZenodoDataStore(DataStore):
     ) -> Iterator[str] | Iterator[tuple[str, dict[str, Any]]]:
         files = self._get_files_from_record()
         for file in files:
-            if self._https_data_store.has_data(file["key"]):
+            if self._https_data_store.has_data(
+                file["key"]
+            ) or is_supported_compressed_file_format(file["key"]):
                 yield file["key"]
 
     def has_data(self, data_id: str, data_type: str = None) -> bool:
