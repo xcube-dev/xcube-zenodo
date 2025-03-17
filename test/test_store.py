@@ -37,6 +37,7 @@ from xcube.core.store.preload import PreloadStatus
 from xcube.util.jsonschema import JsonObjectSchema
 
 from xcube_zenodo.constants import DATA_STORE_ID
+from xcube_zenodo.store import ZenodoDataStore
 
 
 class ZenodoDataStoreTest(unittest.TestCase):
@@ -221,7 +222,9 @@ class ZenodoDataStoreTest(unittest.TestCase):
     @pytest.mark.vcr()
     def test_preload_data_tar_gz(self):
         store = new_data_store(DATA_STORE_ID, root="6453099")
-        cache_store = store.preload_data(blocking=True, silent=True)
+        cache_store = store.preload_data(
+            "diaz2016_inputs_raw.zarr.tar.gz", blocking=True, silent=True
+        )
         cache_store.preload_handle.close()
 
         self.assertCountEqual(["diaz2016_inputs_raw.zarr"], cache_store.list_data_ids())
@@ -248,7 +251,6 @@ class ZenodoDataStoreTest(unittest.TestCase):
     def test_preload_data_zip(self):
         store = new_data_store(DATA_STORE_ID, root="13333034")
         data_ids = ("andorra.zip", "invalid_data_id.tif")
-
         with self.assertLogs("xcube.zenodo", level="WARNING") as cm:
             cache_store = store.preload_data(*data_ids, blocking=True, silent=True)
         self.assertEqual(1, len(cm.output))
@@ -280,7 +282,8 @@ class ZenodoDataStoreTest(unittest.TestCase):
         self.assertIsInstance(ds, xr.Dataset)
         self.assertCountEqual([f"band_{i}" for i in range(1, 40)], list(ds.data_vars))
         self.assertEqual(ds["band_1"].shape, (971, 1149))
-        shutil.rmtree(cache_store.root)
+        if cache_store.protocol == "file":
+            shutil.rmtree(cache_store.root)
 
     @pytest.mark.vcr()
     def test_preload_data_download_fails(self):

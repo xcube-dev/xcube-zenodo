@@ -15,6 +15,11 @@
 * The data store now supports preloading nested compressed files, including those 
   with multiple directory levels within the archive.
 
+### Fixes
+* Path handling during the data preload process is now managed through the abstract 
+  file system of the cache data store.
+
+
 ## Changes in 0.1.1
 
 ### Enhancements

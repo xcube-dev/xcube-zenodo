@@ -19,7 +19,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import shutil
 import tarfile
 import zipfile
 
@@ -44,11 +43,12 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
     ):
         self._cache_store = cache_store
         self._cache_fs: fsspec.AbstractFileSystem = cache_store.fs
+        self._cache_raw_root = cache_store._raw_root
         self._cache_root = cache_store.root
         self._data_ids = {data_id.split("/")[-1]: data_id for data_id in data_ids}
         self._io_id = f"dataset:zarr:{self._cache_store.protocol}"
         self._download_folder = self._cache_fs.sep.join(
-            [self._cache_root, DOWNLOAD_FOLDER]
+            [self._cache_raw_root, DOWNLOAD_FOLDER]
         )
         self._clean_up()
         if not self._cache_fs.isdir(self._download_folder):
@@ -82,7 +82,7 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
         with requests.get(self._data_ids[data_id], stream=True) as response:
             _check_requests_response(response)
             download_path = self._cache_fs.sep.join([self._download_folder, data_id])
-            with open(download_path, "wb") as file:
+            with self._cache_fs.open(download_path, "wb") as file:
                 for chunk in response.iter_content(chunk_size=chunk_size):
                     file.write(chunk)
                     download_size += len(chunk)
@@ -104,25 +104,29 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
             )
         )
         file_path = self._cache_fs.sep.join([self._download_folder, data_id])
-        if zipfile.is_zipfile(file_path):
-            with zipfile.ZipFile(file_path, "r") as zip_ref:
-                dirname = data_id.replace(".zip", "")
-                extract_dir = self._cache_fs.sep.join([self._download_folder, dirname])
-                zip_ref.extractall(extract_dir)
-        elif file_path.endswith(".tar") or file_path.endswith(".tar.gz"):
-            format_ext = identify_compressed_file_format(file_path)
-            mode = "r" if format_ext == "tar" else "r:gz"
-            with tarfile.open(file_path, mode) as tar_ref:
-                dirname = data_id.replace(f".{format_ext}", "")
-                extract_dir = self._cache_fs.sep.join([self._download_folder, dirname])
-                tar_ref.extractall(path=extract_dir, filter="data")
+        with self._cache_fs.open(file_path, "rb") as file:
+
+            # compressed file is a zip
+            if file_path.endswith(".zip"):
+                with zipfile.ZipFile(file, "r") as zip_ref:
+                    dirname = data_id.replace(".zip", "")
+                    extract_dir = self._cache_fs.sep.join(
+                        [self._download_folder, dirname]
+                    )
+                    zip_ref.extractall(extract_dir)
+
+            # compressed file is a tar or tar.gz
+            elif file_path.endswith(".tar") or file_path.endswith(".tar.gz"):
+                format_ext = identify_compressed_file_format(file_path)
+                mode = "r" if format_ext == "tar" else "r:gz"
+                with tarfile.open(fileobj=file, mode=mode) as tar_ref:
+                    dirname = data_id.replace(f".{format_ext}", "")
+                    extract_dir = self._cache_fs.sep.join(
+                        [self._download_folder, dirname]
+                    )
+                    tar_ref.extractall(path=extract_dir, filter="data")
+
         self._cache_fs.delete(file_path)
-        self.notify(
-            PreloadState(
-                data_id,
-                progress=PRELOAD_DOWNLOAD_FRACTION + PRELOAD_DECOMPRESSION_FRACTION,
-            )
-        )
 
     def _prepare_data(self, data_id):
         self.notify(
@@ -161,12 +165,12 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
                     + (size_count / total_size) * PRELOAD_PROCESSING_FRACTION,
                 )
             )
-        shutil.rmtree(extract_dir)
+        self._cache_fs.rm(extract_dir, recursive=True)
         self.notify(PreloadState(data_id, progress=1.0, message="Preload finished"))
 
     def _clean_up(self) -> None:
         if self._cache_fs.isdir(self._download_folder):
-            shutil.rmtree(self._download_folder)
+            self._cache_fs.rm(self._download_folder, recursive=True)
 
 
 def _check_requests_response(response: requests.Response) -> None:
