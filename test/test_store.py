@@ -37,6 +37,7 @@ from xcube.core.store.preload import PreloadStatus
 from xcube.util.jsonschema import JsonObjectSchema
 
 from xcube_zenodo.constants import DATA_STORE_ID
+from xcube_zenodo.store import ZenodoDataStore
 
 
 class ZenodoDataStoreTest(unittest.TestCase):
@@ -248,7 +249,6 @@ class ZenodoDataStoreTest(unittest.TestCase):
     def test_preload_data_zip(self):
         store = new_data_store(DATA_STORE_ID, root="13333034")
         data_ids = ("andorra.zip", "invalid_data_id.tif")
-
         with self.assertLogs("xcube.zenodo", level="WARNING") as cm:
             cache_store = store.preload_data(*data_ids, blocking=True, silent=True)
         self.assertEqual(1, len(cm.output))
