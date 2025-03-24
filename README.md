@@ -39,7 +39,7 @@ To learn more check out the [example notebook zenodo_data_store.ipynb](examples/
 ### Access compressed datasets via the xcube's preload API
 
 If datasets are published as `zip`, `tar`, `tar.gz`, you can use the preload API to
-preload the data into the local or s3 file system. If the compressed file contains
+preload the data into the local file system. If the compressed file contains
 multiple datasets, the data IDs will be extended by one layer. A short example is shown
 below.
 
