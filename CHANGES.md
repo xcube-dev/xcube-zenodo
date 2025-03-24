@@ -1,4 +1,4 @@
-## Changes in 1.0.0 (In Development)
+## Changes in 1.0.0
 
 ### Major Changes
 * The `ZenodoDataStore` class now requires a `root` parameter during initialization,
@@ -7,13 +7,13 @@
   equivalent to the filenames given in one record.   
 * The `preload_data` method now returns a store containing the preloaded data. After
   preloading, the returned store may be used to access the data.
-* If no data IDs are provided in the preload_data method, all compressed datasets in 
-  the Zenodo record will be preloaded.
 
 ### Enhancements
 
 * The data store now supports preloading nested compressed files, including those 
   with multiple directory levels within the archive.
+* If no data IDs are provided in the preload_data method, all compressed datasets in 
+  the Zenodo record will be preloaded.
 
 ### Fixes
 * Path handling during the data preload process is now managed through the abstract 
