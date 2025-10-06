@@ -1,3 +1,5 @@
+## Changes in 1.1.0 (under development)
+
 ## Changes in 1.0.0
 
 ### Major Changes

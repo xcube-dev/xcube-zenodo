@@ -6,6 +6,7 @@ dependencies:
   - python >=3.10
   - fsspec
   - numpy
+  - rarfile
   - requests
   - xarray
   - xcube >=1.9.0

@@ -31,7 +31,13 @@ from xcube.core.store import (
     PreloadedDataStore,
     new_data_store,
 )
-from xcube.util.jsonschema import JsonBooleanSchema, JsonObjectSchema, JsonStringSchema
+from xcube.util.jsonschema import (
+    JsonBooleanSchema,
+    JsonObjectSchema,
+    JsonStringSchema,
+    JsonArraySchema,
+    JsonIntegerSchema,
+)
 
 from ._utils import is_supported_compressed_file_format
 from .constants import CACHE_FOLDER_NAME, LOG
@@ -97,7 +103,7 @@ class ZenodoDataStore(DataStore):
 
     def get_data_ids(
         self, data_type: DataTypeLike = None, include_attrs: Container[str] = None
-    ) -> Iterator[str] | Iterator[tuple[str, dict[str, Any]]]:
+    ) -> Iterator[str | tuple[str, dict[str, Any]] | None]:
         files = self._get_files_from_record()
         for file in files:
             if self._https_data_store.has_data(
@@ -186,6 +192,21 @@ class ZenodoDataStore(DataStore):
                     "If True, the visualization will be suppressed."
                 ),
                 default=True,
+            ),
+            target_format=JsonStringSchema(
+                title="Format of the preloaded dataset in the cache.",
+                description="If not given, native format is kept.",
+                enum=["zarr", "geotiff", "netcdf"],
+                default=None,
+            ),
+            chunks=JsonArraySchema(
+                title="Chunk sizes for each dimension.",
+                description="An iterable with length same as number of dimensions.",
+                items=JsonIntegerSchema(),
+            ),
+            force_preload=JsonBooleanSchema(
+                title="Force preload, regardless if datasets are already preloaded.",
+                default=False,
             ),
         )
         return JsonObjectSchema(
