@@ -74,7 +74,12 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
             any(data_id_mod in ext_id for ext_id in self._cache_store.get_data_ids())
             and not force_preload
         ):
-            LOG.info(f"Dataset {data_id!r} already preloaded.")
+            self.notify(
+                PreloadState(
+                    data_id,
+                    message="Already preloaded",
+                )
+            )
         else:
             self._download_data(data_id)
             self._decompress_data(data_id)
@@ -219,6 +224,9 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
             f"{self._cache_store.protocol}"
         )
         ds = self._cache_store.open_data(source_data_id, opener_id=opener_id)
+        ds.attrs.pop("grid_mapping", None)
+        for var in ds.variables:
+            ds[var].attrs.pop("grid_mapping", None)
         if chunks:
             ds = chunk_dataset(
                 ds,
@@ -246,7 +254,10 @@ def _check_requests_response(response: requests.Response) -> None:
 def _define_single_data_id(data_id: str) -> str:
     dirname = data_id.split("/", maxsplit=1)[0]
     file_ext = data_id.split(".")[-1]
-    return f"{dirname}.{file_ext}"
+    if dirname.endswith(file_ext):
+        return dirname
+    else:
+        return f"{dirname}.{file_ext}"
 
 
 def recursive_listdir(fs: fsspec.AbstractFileSystem, path: str) -> list:

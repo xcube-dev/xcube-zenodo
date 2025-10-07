@@ -14,7 +14,7 @@ on [Zenodo](https://zenodo.org/).
 
 ## How to use the xcube-zenodo plugin
 
-### Lazy access of datasets published as `tif` or `netcdfs`
+### Lazy access of datasets published as `tif` or `netcdfs` and zipped (uncompressed) `zarr`
 
 To access datasets published on Zenodo, locate the **record ID** in the URL of the 
 respective Zenodo webpage. This ID is required when initializing the Zenodo data store.  
@@ -33,13 +33,17 @@ ds = store.open_data(
 )
 ```
 
-To learn more check out the [example notebook zenodo_data_store.ipynb](examples/zenodo_data_store.ipynb).
+To learn more check out the Example note books:
+
+- [Access TIF](examples/01_lazy_access_tif.ipynb)
+- [Access NetCDF](examples/02_lazy_access_netcdf.ipynb)
+- [Access zipped Zarr](examples/03_lazy_access_zarr.ipynb)
 
 
 ### Access compressed datasets via the xcube's preload API
 
-If datasets are published as `zip`, `tar`, `tar.gz`, you can use the preload API to
-preload the data into the local file system. If the compressed file contains
+If datasets are published as `zip`, `tar`, `tar.gz`, or `.rar` you can use the preload
+API to preload the data into the local file system. If the compressed file contains
 multiple datasets, the data IDs will be extended by one layer. A short example is shown
 below.
 
@@ -52,8 +56,10 @@ preloaded_data_ids = cache_store.list_data_ids()
 ds = store.open_data(preloaded_data_ids[0])
 ```
 
-To learn more check out the example notebooks zenodo_data_store_preload*.ipynb in
-[examples](examples).
+To learn more check out the example notebooks:
+
+- [Access zipped TIF files](examples/04_preload_zip.ipynb)
+- [Access RAR-compressed files](examples/05_preload_rar.ipynb)
 
 
 ## Installing the xcube-zenodo plugin
@@ -146,5 +152,6 @@ pytest -v -s --record-mode new_episodes
 ```
 Note that `--record-mode new_episodes` overwrites all cassettes. If one only
 wants to write cassettes which are not saved already, `--record-mode once` can be used.
-[pytest-recording](https://pypi.org/project/pytest-recording/) supports all records modes given by [VCR.py](https://vcrpy.readthedocs.io/en/latest/usage.html#record-modes).
+[pytest-recording](https://pypi.org/project/pytest-recording/) supports all records
+modes given by [VCR.py](https://vcrpy.readthedocs.io/en/latest/usage.html#record-modes).
 After recording the cassettes, testing can be then performed as usual.

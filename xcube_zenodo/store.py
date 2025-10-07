@@ -21,6 +21,7 @@
 
 from typing import Any, Container, Iterator, Tuple
 
+import fsspec
 import requests
 import xarray as xr
 from xcube.core.store import (
@@ -139,17 +140,20 @@ class ZenodoDataStore(DataStore):
         self, data_id: str, opener_id: str = None, **open_params
     ) -> xr.Dataset:
         if is_supported_compressed_file_format(data_id):
-            raise DataStoreError(
-                f"The dataset {data_id} is stored in a compressed format. "
-                f"Please use store.preload_data({data_id!r}) first."
-            )
+            try:
+                return self._open_compressed_zarr(data_id, **open_params)
+            except Exception:
+                raise DataStoreError(
+                    f"The dataset {data_id} is stored in a compressed format. "
+                    f"Please use store.preload_data({data_id!r}) first."
+                ) from None
         else:
             return self._https_data_store.open_data(
                 data_id=data_id, opener_id=opener_id, **open_params
             )
 
     def preload_data(self, *data_ids: str, **preload_params) -> PreloadedDataStore:
-        schema = self.get_preload_data_params()
+        schema = self.get_preload_data_params_schema()
         schema.validate_instance(preload_params)
 
         # this will load all data ids in the store
@@ -177,7 +181,7 @@ class ZenodoDataStore(DataStore):
         )
         return self.cache_store
 
-    def get_preload_data_params(self) -> JsonObjectSchema:
+    def get_preload_data_params_schema(self) -> JsonObjectSchema:
         params = dict(
             blocking=JsonBooleanSchema(
                 title="Switch to make the preloading process blocking or "
@@ -234,3 +238,18 @@ class ZenodoDataStore(DataStore):
         url = f"https://zenodo.org/api/records/{self._root}"
         response = requests.get(url)
         return response.json().get("files", [])
+
+    def _open_compressed_zarr(self, data_id: str, **open_params) -> xr.Dataset:
+        uri = f"https://{self._uri_root}/{data_id}"
+        mapper = fsspec.get_mapper(f"zip::{uri}")
+        compressed_format = data_id.split(".")[-1]
+        group = data_id.replace(f".{compressed_format}", "")
+        if not group.endswith("zarr"):
+            group = f"{group}.zarr"
+        chunks = open_params.pop("chunks", {})
+        return xr.open_dataset(
+            mapper,
+            engine="zarr",
+            **dict(consolidated=False, group=group, chunks=chunks),
+            **open_params,
+        )
