@@ -61,6 +61,11 @@ To learn more check out the example notebooks:
 - [Access zipped TIF files](examples/04_preload_zip.ipynb)
 - [Access RAR-compressed files](examples/05_preload_rar.ipynb)
 
+> **Note:**
+> The Python package [`rarfile`](https://github.com/markokr/rarfile) is used for
+> handling RAR-compressed files. It requires an external decompression backend —
+> such as **`unrar`** or **`bsdtar`** — to be installed on your system.
+
 
 ## Installing the xcube-zenodo plugin
 

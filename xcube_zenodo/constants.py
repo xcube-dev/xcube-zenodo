@@ -35,7 +35,7 @@ MAP_FILE_EXTENSION_FORMAT = {
     "geotiff": "geotiff",
 }
 MAP_FORMAT_FILE_EXTENSION = {"netcdf": "nc", "zarr": "zarr", "geotiff": "tif"}
-DOWNLOAD_FOLDER = "downloads"
+TEMP_PROCESSING_FOLDER = "zenodo_temp"
 PRELOAD_DOWNLOAD_FRACTION = 0.4
 PRELOAD_DECOMPRESSION_FRACTION = 0.1
 PRELOAD_PROCESSING_FRACTION = 0.5
