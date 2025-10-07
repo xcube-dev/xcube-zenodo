@@ -170,8 +170,8 @@ class ZenodoDataStore(DataStore):
                 data_ids_sel.append(f"https://{self._uri_root}/{data_id}")
             else:
                 LOG.warning(
-                    f"{data_id} cannot be preloaded. Only 'zip', 'tar', and "
-                    "'tar.gz' compressed files are supported. The preload "
+                    f"{data_id} cannot be preloaded. Only 'zip', 'tar', 'tar.gz', "
+                    "and 'rar' compressed files are supported. The preload "
                     "request is discarded."
                 )
         self.cache_store.preload_handle = ZenodoPreloadHandle(

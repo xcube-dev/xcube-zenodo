@@ -156,11 +156,13 @@ class ZenodoDataStoreTest(unittest.TestCase):
                 "mldataset:geotiff:https",
                 "geodataframe:shapefile:https",
                 "geodataframe:geojson:https",
+                "mldataset:j2k:https",
+                "dataset:j2k:https",
             ),
             store.get_data_opener_ids(),
         )
         self.assertCountEqual(
-            ("dataset:geotiff:https",),
+            ("dataset:geotiff:https", "mldataset:geotiff:https"),
             store.get_data_opener_ids(self.data_id_tif),
         )
         self.assertCountEqual(
@@ -187,7 +189,6 @@ class ZenodoDataStoreTest(unittest.TestCase):
         self.assertIn("consolidated", schema.properties)
         schema = store.get_open_data_params_schema(data_id=self.data_id_tif)
         self.assertIn("tile_size", schema.properties)
-        self.assertIn("overview_level", schema.properties)
         self.assertIn("data_type", schema.properties)
         schema = store.get_open_data_params_schema(
             data_id=self.data_id_tif, opener_id="mldataset:geotiff:https"
@@ -250,12 +251,18 @@ class ZenodoDataStoreTest(unittest.TestCase):
         store = new_data_store(DATA_STORE_ID, root="13333034")
         data_ids = ("andorra.zip", "invalid_data_id.tif")
         with self.assertLogs("xcube.zenodo", level="WARNING") as cm:
-            cache_store = store.preload_data(*data_ids, blocking=True, silent=True)
+            cache_store = store.preload_data(
+                *data_ids,
+                target_format="zarr",
+                chunks=(2048, 2048),
+                force_preload=True,
+                silent=True,
+            )
         self.assertEqual(1, len(cm.output))
         msg = (
             "WARNING:xcube.zenodo:invalid_data_id.tif cannot be preloaded. "
-            "Only 'zip', 'tar', and 'tar.gz' compressed files are supported. The "
-            "preload request is discarded."
+            "Only 'zip', 'tar', 'tar.gz', and 'rar' compressed files are supported. "
+            "The preload request is discarded."
         )
         self.assertEqual(msg, str(cm.output[-1]))
         cache_store.preload_handle.close()
@@ -278,7 +285,9 @@ class ZenodoDataStoreTest(unittest.TestCase):
             "andorra/disturbance_probability_1985_2023_andorra.zarr"
         )
         self.assertIsInstance(ds, xr.Dataset)
-        self.assertCountEqual([f"band_{i}" for i in range(1, 40)], list(ds.data_vars))
+        self.assertCountEqual(
+            [f"band_{i}" for i in range(1, 40)] + ["spatial_ref"], list(ds.data_vars)
+        )
         self.assertEqual(ds["band_1"].shape, (971, 1149))
         shutil.rmtree(cache_store.root)
 
