@@ -220,10 +220,10 @@ class ZenodoDataStoreTest(unittest.TestCase):
             f"{cm.exception}",
         )
 
-    @pytest.mark.vcr()
+    # @pytest.mark.vcr()
     def test_preload_data_tar_gz(self):
         store = new_data_store(DATA_STORE_ID, root="6453099")
-        cache_store = store.preload_data(blocking=True, silent=True)
+        cache_store = store.preload_data(silent=True)
         cache_store.preload_handle.close()
 
         self.assertCountEqual(["diaz2016_inputs_raw.zarr"], cache_store.list_data_ids())
@@ -246,7 +246,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
         )
         shutil.rmtree(cache_store.root)
 
-    @pytest.mark.vcr()
+    # @pytest.mark.vcr()
     def test_preload_data_zip(self):
         store = new_data_store(DATA_STORE_ID, root="13333034")
         data_ids = ("andorra.zip", "invalid_data_id.tif")

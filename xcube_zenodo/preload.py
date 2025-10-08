@@ -57,6 +57,7 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
         self._cache_root = self._cache_store.root
 
         # setup processing store
+        # noinspection PyProtectedMember
         self._process_store = new_data_store(
             "file", root=f"{TEMP_PROCESSING_FOLDER}/{self._cache_store._raw_root}"
         )
@@ -69,13 +70,12 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
         # trigger preload in parent class
         self._data_ids = {data_id.split("/")[-1]: data_id for data_id in data_ids}
         super().__init__(data_ids=tuple(self._data_ids.keys()), **preload_params)
-        self.close()
 
     def close(self) -> None:
         self._clean_up()
 
     def preload_data(self, data_id: str, **preload_params):
-        format_ext = data_id.split(".")[-1]
+        format_ext = identify_compressed_file_format(data_id)
         force_preload = preload_params.get("force_preload", False)
         data_id_mod = data_id.replace(f".{format_ext}", "")
         if (
@@ -206,21 +206,46 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
     def _copy_file(self, source_data_id: str, len_files: int) -> None:
         target_data_id = source_data_id
         if len_files == 1:
-            target_data_id = _define_single_data_id(target_data_id)
+            target_data_id = self._define_single_data_id(target_data_id)
 
         source_fp = f"{self._process_root}{self._process_fs.sep}{source_data_id}"
         target_fp = f"{self._cache_root}{self._cache_fs.sep}{target_data_id}"
         dirname = self._cache_fs.sep.join(target_fp.split(self._cache_fs.sep)[:-1])
         if not self._cache_fs.isdir(dirname):
             self._cache_fs.makedirs(dirname)
-        with self._process_fs.open(source_fp, "rb") as src_file:
-            with self._cache_fs.open(target_fp, "wb") as dst_file:
-                # Read and write in chunks to handle large files
-                while True:
-                    chunk = src_file.read(_CHUNK_SIZE)
-                    if not chunk:
-                        break
-                    dst_file.write(chunk)
+        if self._process_fs.isdir(source_fp):
+            # --- Case: Zarr or directory ---
+            # Recursively copy directory contents
+            for path, dirs, files in self._process_fs.walk(source_fp):
+                rel_path = path.replace(source_fp, "").lstrip(self._process_fs.sep)
+                target_dir = (
+                    f"{target_fp}{self._cache_fs.sep}{rel_path}"
+                    if rel_path
+                    else target_fp
+                )
+                if not self._cache_fs.exists(target_dir):
+                    self._cache_fs.makedirs(target_dir, exist_ok=True)
+
+                for file in files:
+                    src_file = f"{path}{self._process_fs.sep}{file}"
+                    dst_file = f"{target_dir}{self._cache_fs.sep}{file}"
+
+                    with self._process_fs.open(src_file, "rb") as src_f:
+                        with self._cache_fs.open(dst_file, "wb") as dst_f:
+                            while True:
+                                chunk = src_f.read(_CHUNK_SIZE)
+                                if not chunk:
+                                    break
+                                dst_f.write(chunk)
+        else:
+            # --- Case: Regular single file ---
+            with self._process_fs.open(source_fp, "rb") as src_file:
+                with self._cache_fs.open(target_fp, "wb") as dst_file:
+                    while True:
+                        chunk = src_file.read(_CHUNK_SIZE)
+                        if not chunk:
+                            break
+                        dst_file.write(chunk)
 
     def _reformat_dataset(
         self, source_data_id: str, target_format: str, chunks: Sequence, len_files: int
@@ -232,7 +257,7 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
         format_ext = source_data_id.split(".")[-1]
         target_data_id = source_data_id.replace(format_ext, target_ext)
         if len_files == 1:
-            target_data_id = _define_single_data_id(target_data_id)
+            target_data_id = self._define_single_data_id(target_data_id)
         # noinspection PyUnresolvedReferences
         opener_id = (
             f"dataset:{MAP_FILE_EXTENSION_FORMAT[format_ext]}:"
@@ -266,7 +291,7 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
 
     def _clean_up(self) -> None:
         if self._process_fs.isdir(self._process_root):
-            self._process_fs.rmdir(self._process_root)
+            self._process_fs.rm(self._process_root, recursive=True)
 
 
 def _check_requests_response(response: requests.Response) -> None:

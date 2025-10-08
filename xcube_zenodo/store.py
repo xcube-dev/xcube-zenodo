@@ -40,8 +40,8 @@ from xcube.util.jsonschema import (
     JsonIntegerSchema,
 )
 
-from ._utils import is_supported_compressed_file_format
-from .constants import CACHE_FOLDER_NAME, LOG
+from ._utils import is_supported_compressed_file_format, identify_compressed_file_format
+from .constants import CACHE_FOLDER_NAME, LOG, COMPRESSED_FORMATS
 from .preload import ZenodoPreloadHandle
 
 
@@ -241,8 +241,13 @@ class ZenodoDataStore(DataStore):
 
     def _open_compressed_zarr(self, data_id: str, **open_params) -> xr.Dataset:
         uri = f"https://{self._uri_root}/{data_id}"
-        mapper = fsspec.get_mapper(f"zip::{uri}")
-        compressed_format = data_id.split(".")[-1]
+        compressed_format = identify_compressed_file_format(data_id)
+        if compressed_format == "zip":
+            mapper = fsspec.get_mapper(f"zip::{uri}")
+        elif compressed_format in ["tar", "tar.gz"]:
+            mapper = fsspec.get_mapper(f"tar::{uri}")
+        elif compressed_format in ["rar"]:
+            raise ValueError("Rar-compressed dataset cannot be opened lazily.")
         group = data_id.replace(f".{compressed_format}", "")
         if not group.endswith("zarr"):
             group = f"{group}.zarr"
