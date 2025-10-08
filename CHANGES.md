@@ -1,4 +1,16 @@
-## Changes in 1.1.0 (under development)
+## Changes in 1.1.0
+
+- Support for RAR-compressed datasets.
+- Introduces new preload parameters:
+  - `target_format` — defines the output format of the dataset stored in the cache.
+  - `chunks` — specifies the chunk size for the cached dataset.
+    If either parameter is set to `None`, the native file format is preserved and the
+    data is copied as-is.
+- Enables the use of any file-system based writable data store as cache store
+  (e.g. `"s3"`). Data is downloaded and decompressed locally, then written to the
+  user-defined cache store.
+- Adds support for lazy opening of archived Zarr files (`.zip` / `.tar`) via
+  `fsspec.get_mapper`.
 
 ## Changes in 1.0.0
 

@@ -247,7 +247,10 @@ class ZenodoDataStore(DataStore):
         elif compressed_format in ["tar", "tar.gz"]:
             mapper = fsspec.get_mapper(f"tar::{uri}")
         elif compressed_format in ["rar"]:
-            raise ValueError("Rar-compressed dataset cannot be opened lazily.")
+            raise ValueError(
+                "RAR-compressed dataset cannot be opened lazily. "
+                "Download and extract the file first via `preload_data` method."
+            )
         group = data_id.replace(f".{compressed_format}", "")
         if not group.endswith("zarr"):
             group = f"{group}.zarr"
