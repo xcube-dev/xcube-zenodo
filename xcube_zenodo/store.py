@@ -200,12 +200,15 @@ class ZenodoDataStore(DataStore):
             target_format=JsonStringSchema(
                 title="Format of the preloaded dataset in the cache.",
                 description="If not given, native format is kept.",
-                enum=["zarr", "geotiff", "netcdf"],
+                enum=["zarr", "netcdf"],
                 default=None,
             ),
             chunks=JsonArraySchema(
                 title="Chunk sizes for each dimension.",
-                description="An iterable with length same as number of dimensions.",
+                description=(
+                    "An iterable with length same as number of dimensions. "
+                    "Note this is only applied if `target_format is given."
+                ),
                 items=JsonIntegerSchema(),
             ),
             force_preload=JsonBooleanSchema(

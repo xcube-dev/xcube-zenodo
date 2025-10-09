@@ -178,6 +178,11 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
         size_count = 0
         target_format = preload_params.get("target_format")
         chunks = preload_params.get("chunks")
+        if target_format is None and chunks is not None:
+            LOG.warning(
+                "Chunks can be only considered in combination with `target_format`. "
+                "No manipulation is performed to the extracted data."
+            )
         for sub_file in sub_files:
             source_data_id = sub_file["name"].replace(
                 f"{self._process_root}{self._process_fs.sep}", ""
