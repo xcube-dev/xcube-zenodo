@@ -22,7 +22,6 @@ dependencies = [
   "numpy",
   "rarfile",
   "requests",
-  "tabulate",
   "xarray",
   "xcube>=1.12.0",
   "zarr >=2.11,<3"
