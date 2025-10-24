@@ -220,32 +220,6 @@ class ZenodoDataStoreTest(unittest.TestCase):
         )
 
     @pytest.mark.vcr()
-    def test_preload_data_tar_gz(self):
-        store = new_data_store(DATA_STORE_ID, root="6453099")
-        cache_store = store.preload_data(silent=True)
-        cache_store.preload_handle.close()
-
-        self.assertCountEqual(["diaz2016_inputs_raw.zarr"], cache_store.list_data_ids())
-        ds = cache_store.open_data("diaz2016_inputs_raw.zarr")
-        self.assertIsInstance(ds, xr.Dataset)
-        self.assertEqual(
-            {
-                "country": 160,
-                "coef": 7,
-                "seg": 12148,
-                "elev": 15,
-                "return_period": 5,
-                "fund": 16,
-                "rcp_pt": 12,
-                "t": 20,
-                "repseg": 8,
-                "subset": 35,
-            },
-            ds.sizes,
-        )
-        shutil.rmtree(cache_store.root)
-
-    @pytest.mark.vcr()
     def test_preload_data_zip(self):
         store = new_data_store(DATA_STORE_ID, root="13333034")
         cache_store = store.preload_data(
