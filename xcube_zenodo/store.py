@@ -21,6 +21,7 @@
 
 from typing import Any, Container, Iterator, Tuple
 
+import fsspec
 import requests
 import xarray as xr
 from xcube.core.store import (
@@ -31,10 +32,16 @@ from xcube.core.store import (
     PreloadedDataStore,
     new_data_store,
 )
-from xcube.util.jsonschema import JsonBooleanSchema, JsonObjectSchema, JsonStringSchema
+from xcube.util.jsonschema import (
+    JsonBooleanSchema,
+    JsonObjectSchema,
+    JsonStringSchema,
+    JsonArraySchema,
+    JsonIntegerSchema,
+)
 
-from ._utils import is_supported_compressed_file_format
-from .constants import CACHE_FOLDER_NAME, LOG
+from ._utils import is_supported_compressed_file_format, identify_compressed_file_format
+from .constants import CACHE_FOLDER_NAME, LOG, COMPRESSED_FORMATS
 from .preload import ZenodoPreloadHandle
 
 
@@ -97,7 +104,7 @@ class ZenodoDataStore(DataStore):
 
     def get_data_ids(
         self, data_type: DataTypeLike = None, include_attrs: Container[str] = None
-    ) -> Iterator[str] | Iterator[tuple[str, dict[str, Any]]]:
+    ) -> Iterator[str | tuple[str, dict[str, Any]] | None]:
         files = self._get_files_from_record()
         for file in files:
             if self._https_data_store.has_data(
@@ -133,17 +140,20 @@ class ZenodoDataStore(DataStore):
         self, data_id: str, opener_id: str = None, **open_params
     ) -> xr.Dataset:
         if is_supported_compressed_file_format(data_id):
-            raise DataStoreError(
-                f"The dataset {data_id} is stored in a compressed format. "
-                f"Please use store.preload_data({data_id!r}) first."
-            )
+            try:
+                return self._open_compressed_zarr(data_id, **open_params)
+            except Exception:
+                raise DataStoreError(
+                    f"The dataset {data_id} is stored in a compressed format. "
+                    f"Please use store.preload_data({data_id!r}) first."
+                ) from None
         else:
             return self._https_data_store.open_data(
                 data_id=data_id, opener_id=opener_id, **open_params
             )
 
     def preload_data(self, *data_ids: str, **preload_params) -> PreloadedDataStore:
-        schema = self.get_preload_data_params()
+        schema = self.get_preload_data_params_schema()
         schema.validate_instance(preload_params)
 
         # this will load all data ids in the store
@@ -160,8 +170,8 @@ class ZenodoDataStore(DataStore):
                 data_ids_sel.append(f"https://{self._uri_root}/{data_id}")
             else:
                 LOG.warning(
-                    f"{data_id} cannot be preloaded. Only 'zip', 'tar', and "
-                    "'tar.gz' compressed files are supported. The preload "
+                    f"{data_id} cannot be preloaded. Only 'zip', 'tar', 'tar.gz', "
+                    "and 'rar' compressed files are supported. The preload "
                     "request is discarded."
                 )
         self.cache_store.preload_handle = ZenodoPreloadHandle(
@@ -171,7 +181,7 @@ class ZenodoDataStore(DataStore):
         )
         return self.cache_store
 
-    def get_preload_data_params(self) -> JsonObjectSchema:
+    def get_preload_data_params_schema(self) -> JsonObjectSchema:
         params = dict(
             blocking=JsonBooleanSchema(
                 title="Switch to make the preloading process blocking or "
@@ -186,6 +196,24 @@ class ZenodoDataStore(DataStore):
                     "If True, the visualization will be suppressed."
                 ),
                 default=True,
+            ),
+            target_format=JsonStringSchema(
+                title="Format of the preloaded dataset in the cache.",
+                description="If not given, native format is kept.",
+                enum=["zarr", "netcdf"],
+                default=None,
+            ),
+            chunks=JsonArraySchema(
+                title="Chunk sizes for each dimension.",
+                description=(
+                    "An iterable with length same as number of dimensions. "
+                    "Note this is only applied if `target_format is given."
+                ),
+                items=JsonIntegerSchema(),
+            ),
+            force_preload=JsonBooleanSchema(
+                title="Force preload, regardless if datasets are already preloaded.",
+                default=False,
             ),
         )
         return JsonObjectSchema(
@@ -213,3 +241,26 @@ class ZenodoDataStore(DataStore):
         url = f"https://zenodo.org/api/records/{self._root}"
         response = requests.get(url)
         return response.json().get("files", [])
+
+    def _open_compressed_zarr(self, data_id: str, **open_params) -> xr.Dataset:
+        uri = f"https://{self._uri_root}/{data_id}"
+        compressed_format = identify_compressed_file_format(data_id)
+        if compressed_format == "zip":
+            mapper = fsspec.get_mapper(f"zip::{uri}")
+        elif compressed_format in ["tar", "tar.gz"]:
+            mapper = fsspec.get_mapper(f"tar::{uri}")
+        elif compressed_format in ["rar"]:
+            raise ValueError(
+                "RAR-compressed dataset cannot be opened lazily. "
+                "Download and extract the file first via `preload_data` method."
+            )
+        group = data_id.replace(f".{compressed_format}", "")
+        if not group.endswith("zarr"):
+            group = f"{group}.zarr"
+        chunks = open_params.pop("chunks", {})
+        return xr.open_dataset(
+            mapper,
+            engine="zarr",
+            **dict(consolidated=False, group=group, chunks=chunks),
+            **open_params,
+        )

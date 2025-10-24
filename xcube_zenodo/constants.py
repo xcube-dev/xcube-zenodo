@@ -26,8 +26,16 @@ LOG = logging.getLogger("xcube.zenodo")
 CACHE_FOLDER_NAME = "zenodo_cache"
 
 # preload specific constants
-COMPRESSED_FORMATS = ["zip", "tar", "tar.gz"]
-DOWNLOAD_FOLDER = "downloads"
+COMPRESSED_FORMATS = ["zip", "tar", "tar.gz", "rar"]
+MAP_FILE_EXTENSION_FORMAT = {
+    "nc": "netcdf",
+    "zarr": "zarr",
+    "tif": "geotiff",
+    "tiff": "geotiff",
+    "geotiff": "geotiff",
+}
+MAP_FORMAT_FILE_EXTENSION = {"netcdf": "nc", "zarr": "zarr", "geotiff": "tif"}
+TEMP_PROCESSING_FOLDER = "zenodo_temp"
 PRELOAD_DOWNLOAD_FRACTION = 0.4
 PRELOAD_DECOMPRESSION_FRACTION = 0.1
 PRELOAD_PROCESSING_FRACTION = 0.5
