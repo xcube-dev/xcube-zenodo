@@ -19,27 +19,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from collections.abc import Sequence
 import tarfile
-import rarfile
 import zipfile
-
+from collections.abc import Sequence
 
 import fsspec
+import rarfile
 import requests
+from xcube.core.chunk import chunk_dataset
 from xcube.core.store import DataStoreError, PreloadedDataStore, new_data_store
 from xcube.core.store.preload import ExecutorPreloadHandle, PreloadState, PreloadStatus
-from xcube.core.chunk import chunk_dataset
 
 from ._utils import identify_compressed_file_format
 from .constants import (
-    TEMP_PROCESSING_FOLDER,
+    LOG,
+    MAP_FILE_EXTENSION_FORMAT,
+    MAP_FORMAT_FILE_EXTENSION,
     PRELOAD_DECOMPRESSION_FRACTION,
     PRELOAD_DOWNLOAD_FRACTION,
     PRELOAD_PROCESSING_FRACTION,
-    MAP_FILE_EXTENSION_FORMAT,
-    MAP_FORMAT_FILE_EXTENSION,
-    LOG,
+    TEMP_PROCESSING_FOLDER,
 )
 
 _CHUNK_SIZE = 1024 * 1024

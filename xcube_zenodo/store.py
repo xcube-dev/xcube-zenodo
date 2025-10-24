@@ -33,15 +33,15 @@ from xcube.core.store import (
     new_data_store,
 )
 from xcube.util.jsonschema import (
+    JsonArraySchema,
     JsonBooleanSchema,
+    JsonIntegerSchema,
     JsonObjectSchema,
     JsonStringSchema,
-    JsonArraySchema,
-    JsonIntegerSchema,
 )
 
-from ._utils import is_supported_compressed_file_format, identify_compressed_file_format
-from .constants import CACHE_FOLDER_NAME, LOG, COMPRESSED_FORMATS
+from ._utils import identify_compressed_file_format, is_supported_compressed_file_format
+from .constants import CACHE_FOLDER_NAME, LOG
 from .preload import ZenodoPreloadHandle
 
 

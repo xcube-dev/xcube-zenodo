@@ -37,7 +37,6 @@ from xcube.core.store.preload import PreloadStatus
 from xcube.util.jsonschema import JsonObjectSchema
 
 from xcube_zenodo.constants import DATA_STORE_ID
-from xcube_zenodo.store import ZenodoDataStore
 
 
 class ZenodoDataStoreTest(unittest.TestCase):
