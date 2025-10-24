@@ -1,0 +1,4 @@
+{
+    "_ARRAY_DIMENSIONS": [],
+    "description": "minimum coastland value scaling factor to consider based on stylized assumption that populated coastal land more valuable, as much as 2.4x when = 2000ppl/sqkm (1 at 25ppl/sqkm, 0.75 at 10ppl/sqkm)"
+}
