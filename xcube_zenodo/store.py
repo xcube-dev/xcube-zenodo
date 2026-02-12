@@ -219,7 +219,7 @@ class ZenodoDataStore(DataStore):
         return JsonObjectSchema(
             properties=dict(**params),
             required=[],
-            additional_properties=False,
+            additional_properties=True,
         )
 
     def search_data(self, data_type: DataTypeLike = None, **search_params):
