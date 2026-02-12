@@ -197,6 +197,12 @@ class ZenodoDataStore(DataStore):
                 ),
                 default=True,
             ),
+            max_workers=JsonIntegerSchema(
+                title="Maximum number of concurrent workers.",
+                description="Limits the number of parallel preload tasks.",
+                minimum=1,
+                default=4,
+            ),
             target_format=JsonStringSchema(
                 title="Format of the preloaded dataset in the cache.",
                 description="If not given, native format is kept.",
