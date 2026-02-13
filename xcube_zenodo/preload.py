@@ -76,8 +76,13 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
         self._data_ids = {data_id.split("/")[-1]: data_id for data_id in data_ids}
         super().__init__(data_ids=tuple(self._data_ids.keys()), **preload_params)
 
+        # delete temp storage
+        self._clean_up()
+
     def close(self) -> None:
         self._clean_up()
+        if self._cache_fs.isdir(self._cache_root):
+            self._cache_fs.rm(self._cache_root, recursive=True)
 
     def preload_data(self, data_id: str, **preload_params):
         format_ext = identify_compressed_file_format(data_id)
