@@ -19,7 +19,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import shutil
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -241,7 +240,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
             },
             ds.sizes,
         )
-        shutil.rmtree(cache_store.root)
+        cache_store.preload_handle.close()
 
     @pytest.mark.vcr()
     def test_preload_data_zip(self):
@@ -271,7 +270,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
         self.assertIsInstance(ds, xr.Dataset)
         self.assertCountEqual([f"band_{i}" for i in range(1, 40)], list(ds.data_vars))
         self.assertEqual(ds["band_1"].shape, (971, 1149))
-        shutil.rmtree(cache_store.root)
+        cache_store.preload_handle.close()
 
     @pytest.mark.vcr()
     def test_preload_data_zip_preload_params(self):
@@ -319,7 +318,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
             [f"band_{i}" for i in range(1, 40)] + ["spatial_ref"], list(ds.data_vars)
         )
         self.assertEqual(ds["band_1"].shape, (971, 1149))
-        shutil.rmtree(cache_store.root)
+        cache_store.preload_handle.close()
 
     @pytest.mark.vcr()
     def test_preload_data_download_fails(self):
