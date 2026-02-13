@@ -222,7 +222,6 @@ class ZenodoDataStoreTest(unittest.TestCase):
     def test_preload_data_tar_gz(self):
         store = new_data_store(DATA_STORE_ID, root="6453099")
         cache_store = store.preload_data(silent=True)
-        cache_store.preload_handle.close()
 
         self.assertCountEqual(["diaz2016_inputs_raw.zarr"], cache_store.list_data_ids())
         ds = cache_store.open_data("diaz2016_inputs_raw.zarr")
@@ -251,7 +250,6 @@ class ZenodoDataStoreTest(unittest.TestCase):
             "andorra.zip",
             silent=True,
         )
-        cache_store.preload_handle.close()
 
         self.assertCountEqual(
             [
@@ -298,7 +296,6 @@ class ZenodoDataStoreTest(unittest.TestCase):
             "The preload request is discarded."
         )
         self.assertEqual(msg, str(cm.output[-1]))
-        cache_store.preload_handle.close()
 
         self.assertCountEqual(
             [
