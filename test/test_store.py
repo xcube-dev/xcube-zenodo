@@ -19,7 +19,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import shutil
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -222,7 +221,6 @@ class ZenodoDataStoreTest(unittest.TestCase):
     def test_preload_data_tar_gz(self):
         store = new_data_store(DATA_STORE_ID, root="6453099")
         cache_store = store.preload_data(silent=True)
-        cache_store.preload_handle.close()
 
         self.assertCountEqual(["diaz2016_inputs_raw.zarr"], cache_store.list_data_ids())
         ds = cache_store.open_data("diaz2016_inputs_raw.zarr")
@@ -242,7 +240,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
             },
             ds.sizes,
         )
-        shutil.rmtree(cache_store.root)
+        cache_store.preload_handle.close()
 
     @pytest.mark.vcr()
     def test_preload_data_zip(self):
@@ -251,7 +249,6 @@ class ZenodoDataStoreTest(unittest.TestCase):
             "andorra.zip",
             silent=True,
         )
-        cache_store.preload_handle.close()
 
         self.assertCountEqual(
             [
@@ -273,7 +270,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
         self.assertIsInstance(ds, xr.Dataset)
         self.assertCountEqual([f"band_{i}" for i in range(1, 40)], list(ds.data_vars))
         self.assertEqual(ds["band_1"].shape, (971, 1149))
-        shutil.rmtree(cache_store.root)
+        cache_store.preload_handle.close()
 
     @pytest.mark.vcr()
     def test_preload_data_zip_preload_params(self):
@@ -298,7 +295,6 @@ class ZenodoDataStoreTest(unittest.TestCase):
             "The preload request is discarded."
         )
         self.assertEqual(msg, str(cm.output[-1]))
-        cache_store.preload_handle.close()
 
         self.assertCountEqual(
             [
@@ -322,7 +318,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
             [f"band_{i}" for i in range(1, 40)] + ["spatial_ref"], list(ds.data_vars)
         )
         self.assertEqual(ds["band_1"].shape, (971, 1149))
-        shutil.rmtree(cache_store.root)
+        cache_store.preload_handle.close()
 
     @pytest.mark.vcr()
     def test_preload_data_download_fails(self):

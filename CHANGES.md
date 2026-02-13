@@ -1,3 +1,9 @@
+## Changes in 1.1.1 (under development)
+
+- Add support for configuring the number of concurrent workers in `preload_data`,
+  limiting parallel preload tasks. Defaults to 4 workers.
+
+
 ## Changes in 1.1.0
 
 - Support for RAR-compressed datasets.

@@ -22,6 +22,7 @@
 import tarfile
 import zipfile
 from collections.abc import Sequence
+from concurrent.futures.thread import ThreadPoolExecutor
 
 import fsspec
 import rarfile
@@ -66,12 +67,22 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
         if not self._process_fs.isdir(self._process_root):
             self._process_fs.makedirs(self._process_root)
 
+        # limit number of workers in the preload process
+        if "executor" not in preload_params:
+            max_workers = preload_params.pop("max_workers", 4)
+            preload_params["executor"] = ThreadPoolExecutor(max_workers=max_workers)
+
         # trigger preload in parent class
         self._data_ids = {data_id.split("/")[-1]: data_id for data_id in data_ids}
         super().__init__(data_ids=tuple(self._data_ids.keys()), **preload_params)
 
+        # delete temp storage
+        self._clean_up()
+
     def close(self) -> None:
         self._clean_up()
+        if self._cache_fs.isdir(self._cache_root):
+            self._cache_fs.rm(self._cache_root, recursive=True)
 
     def preload_data(self, data_id: str, **preload_params):
         format_ext = identify_compressed_file_format(data_id)
