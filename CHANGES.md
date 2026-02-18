@@ -1,4 +1,4 @@
-## Changes in 1.1.1 (under development)
+## Changes in 1.1.1
 
 - Add support for configuring the number of concurrent workers in `preload_data`,
   limiting parallel preload tasks. Defaults to 4 workers.
