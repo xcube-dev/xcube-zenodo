@@ -23,7 +23,7 @@ dependencies = [
   "rarfile",
   "requests",
   "xarray",
-  "xcube>=1.12.0",
+  "xcube>=1.13.1",
   "zarr >=2.11,<3"
 ]
 
