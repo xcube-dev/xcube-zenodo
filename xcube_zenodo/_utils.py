@@ -21,15 +21,15 @@
 
 from typing import Optional
 
-from .constants import COMPRESSED_FORMATS
+from .constants import PRELOAD_FORMATS
 
 
-def identify_compressed_file_format(data_id: str) -> Optional[str]:
-    for format_id in COMPRESSED_FORMATS:
+def identify_preload_file_format(data_id: str) -> Optional[str]:
+    for format_id in PRELOAD_FORMATS:
         if data_id.endswith(format_id):
             return format_id
     return None
 
 
-def is_supported_compressed_file_format(data_id: str) -> bool:
-    return identify_compressed_file_format(data_id) is not None
+def is_supported_preload_file_format(data_id: str) -> bool:
+    return identify_preload_file_format(data_id) is not None

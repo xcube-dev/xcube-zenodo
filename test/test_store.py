@@ -146,7 +146,6 @@ class ZenodoDataStoreTest(unittest.TestCase):
         store = new_data_store(DATA_STORE_ID, root=self.record_id)
         self.assertCountEqual(
             (
-                "dataset:netcdf:https",
                 "dataset:zarr:https",
                 "dataset:levels:https",
                 "mldataset:levels:https",
@@ -212,8 +211,9 @@ class ZenodoDataStoreTest(unittest.TestCase):
             _ = store.open_data(data_id="1234567/test.zip")
         self.assertEqual(
             (
-                "The dataset 1234567/test.zip is stored in a compressed format. "
-                "Please use store.preload_data('1234567/test.zip') first."
+                "The dataset 1234567/test.zip is stored in a format that does not "
+                "support lazy access. Please load it explicitly using "
+                "store.preload_data('1234567/test.zip') first."
             ),
             f"{cm.exception}",
         )
@@ -291,8 +291,8 @@ class ZenodoDataStoreTest(unittest.TestCase):
         self.assertEqual(1, len(cm.output))
         msg = (
             "WARNING:xcube.zenodo:invalid_data_id.tif cannot be preloaded. "
-            "Only 'zip', 'tar', 'tar.gz', and 'rar' compressed files are supported. "
-            "The preload request is discarded."
+            "Only 'nc', 'zip', 'tar', 'tar.gz', and 'rar' compressed files "
+            "are supported. The preload request is discarded."
         )
         self.assertEqual(msg, str(cm.output[-1]))
 
@@ -318,6 +318,23 @@ class ZenodoDataStoreTest(unittest.TestCase):
             [f"band_{i}" for i in range(1, 40)] + ["spatial_ref"], list(ds.data_vars)
         )
         self.assertEqual(ds["band_1"].shape, (971, 1149))
+        cache_store.preload_handle.close()
+
+    @pytest.mark.vcr()
+    def test_preload_data_netcdf(self):
+        store = new_data_store(DATA_STORE_ID, root="13882297")
+        cache_store = store.preload_data(
+            "gridded_tidestats_ERA5weather.nc", silent=True
+        )
+
+        self.assertCountEqual(
+            ["gridded_tidestats_ERA5weather.nc"],
+            cache_store.list_data_ids(),
+        )
+        ds = cache_store.open_data("gridded_tidestats_ERA5weather.nc")
+        self.assertIsInstance(ds, xr.Dataset)
+        self.assertIn("MHHW", ds.data_vars)
+        self.assertEqual(ds["MHHW"].shape, (375, 297))
         cache_store.preload_handle.close()
 
     @pytest.mark.vcr()
@@ -350,6 +367,10 @@ class ZenodoDataStoreTest(unittest.TestCase):
             (
                 "data.zarr.zip",
                 "zip::https://zenodo.org/records/13333034/files/data.zarr.zip",
+            ),
+            (
+                "data.zip",
+                "zip::https://zenodo.org/records/13333034/files/data.zip",
             ),
             (
                 "data.zarr.tar",
@@ -389,7 +410,7 @@ class ZenodoDataStoreTest(unittest.TestCase):
 
     def test_open_compressed_zarr_raises_for_rar(self):
         with pytest.raises(
-            ValueError, match="RAR-compressed dataset cannot be opened lazily."
+            ValueError, match=f"Dataset in 'rar' format cannot be opened lazily."
         ):
             store = new_data_store(DATA_STORE_ID, root="13333034")
             store._open_compressed_zarr("data.zarr.rar")

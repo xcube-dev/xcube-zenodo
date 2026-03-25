@@ -1,3 +1,9 @@
+# Changes in 1.2.0
+
+- Lazy access to NetCDF datasets via Zenodo is no longer supported. NetCDF files 
+  must now be preloaded using the `preload_data` method.
+
+
 ## Changes in 1.1.1
 
 - Add support for configuring the number of concurrent workers in `preload_data`,

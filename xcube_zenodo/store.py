@@ -40,7 +40,7 @@ from xcube.util.jsonschema import (
     JsonStringSchema,
 )
 
-from ._utils import identify_compressed_file_format, is_supported_compressed_file_format
+from ._utils import identify_preload_file_format, is_supported_preload_file_format
 from .constants import CACHE_FOLDER_NAME, LOG
 from .preload import ZenodoPreloadHandle
 
@@ -109,7 +109,7 @@ class ZenodoDataStore(DataStore):
         for file in files:
             if self._https_data_store.has_data(
                 file["key"]
-            ) or is_supported_compressed_file_format(file["key"]):
+            ) or is_supported_preload_file_format(file["key"]):
                 yield file["key"]
 
     def has_data(self, data_id: str, data_type: str = None) -> bool:
@@ -125,9 +125,10 @@ class ZenodoDataStore(DataStore):
     def get_data_opener_ids(
         self, data_id: str = None, data_type: DataTypeLike = None
     ) -> Tuple[str, ...]:
-        return self._https_data_store.get_data_opener_ids(
+        opener_ids = self._https_data_store.get_data_opener_ids(
             data_id=data_id, data_type=data_type
         )
+        return (opener_id for opener_id in opener_ids if "netcdf" not in opener_id)
 
     def get_open_data_params_schema(
         self, data_id: str = None, opener_id: str = None
@@ -139,13 +140,14 @@ class ZenodoDataStore(DataStore):
     def open_data(
         self, data_id: str, opener_id: str = None, **open_params
     ) -> xr.Dataset:
-        if is_supported_compressed_file_format(data_id):
+        if is_supported_preload_file_format(data_id):
             try:
                 return self._open_compressed_zarr(data_id, **open_params)
             except Exception:
                 raise DataStoreError(
-                    f"The dataset {data_id} is stored in a compressed format. "
-                    f"Please use store.preload_data({data_id!r}) first."
+                    f"The dataset {data_id} is stored in a format that does not "
+                    f"support lazy access. Please load it explicitly using "
+                    f"store.preload_data({data_id!r}) first."
                 ) from None
         else:
             return self._https_data_store.open_data(
@@ -161,17 +163,17 @@ class ZenodoDataStore(DataStore):
             files = self._get_files_from_record()
             data_ids = []
             for file in files:
-                if is_supported_compressed_file_format(file["key"]):
+                if is_supported_preload_file_format(file["key"]):
                     data_ids.append(file["key"])
 
         data_ids_sel = []
         for data_id in data_ids:
-            if is_supported_compressed_file_format(data_id):
+            if is_supported_preload_file_format(data_id):
                 data_ids_sel.append(f"https://{self._uri_root}/{data_id}")
             else:
                 LOG.warning(
-                    f"{data_id} cannot be preloaded. Only 'zip', 'tar', 'tar.gz', "
-                    "and 'rar' compressed files are supported. The preload "
+                    f"{data_id} cannot be preloaded. Only 'nc', 'zip', 'tar', "
+                    "'tar.gz', and 'rar' compressed files are supported. The preload "
                     "request is discarded."
                 )
         self.cache_store.preload_handle = ZenodoPreloadHandle(
@@ -250,17 +252,17 @@ class ZenodoDataStore(DataStore):
 
     def _open_compressed_zarr(self, data_id: str, **open_params) -> xr.Dataset:
         uri = f"https://{self._uri_root}/{data_id}"
-        compressed_format = identify_compressed_file_format(data_id)
-        if compressed_format == "zip":
+        format_id = identify_preload_file_format(data_id)
+        if format_id == "zip":
             mapper = fsspec.get_mapper(f"zip::{uri}")
-        elif compressed_format in ["tar", "tar.gz"]:
+        elif format_id in ["tar", "tar.gz"]:
             mapper = fsspec.get_mapper(f"tar::{uri}")
-        elif compressed_format in ["rar"]:
+        else:
             raise ValueError(
-                "RAR-compressed dataset cannot be opened lazily. "
+                f"Dataset in {format_id!r} format cannot be opened lazily. "
                 "Download and extract the file first via `preload_data` method."
             )
-        group = data_id.replace(f".{compressed_format}", "")
+        group = data_id.replace(f".{format_id}", "")
         if not group.endswith("zarr"):
             group = f"{group}.zarr"
         chunks = open_params.pop("chunks", {})

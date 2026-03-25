@@ -22,23 +22,23 @@
 import unittest
 
 from xcube_zenodo._utils import (
-    identify_compressed_file_format,
-    is_supported_compressed_file_format,
+    identify_preload_file_format,
+    is_supported_preload_file_format,
 )
 
 
 class UtilsTest(unittest.TestCase):
 
     def test_identify_compressed_file_format(self):
-        self.assertIsNone(identify_compressed_file_format("1234567/test.tif"))
-        self.assertEqual("zip", identify_compressed_file_format("1234567/test.zip"))
-        self.assertEqual("tar", identify_compressed_file_format("1234567/test.tar"))
-        self.assertEqual(
-            "tar.gz", identify_compressed_file_format("1234567/test.tar.gz")
-        )
+        self.assertIsNone(identify_preload_file_format("1234567/test.tif"))
+        self.assertEqual("zip", identify_preload_file_format("1234567/test.zip"))
+        self.assertEqual("tar", identify_preload_file_format("1234567/test.tar"))
+        self.assertEqual("nc", identify_preload_file_format("1234567/test.nc"))
+        self.assertEqual("tar.gz", identify_preload_file_format("1234567/test.tar.gz"))
 
     def test_is_supported_compressed_file_format(self):
-        self.assertTrue(is_supported_compressed_file_format("1234567/test.zip"))
-        self.assertTrue(is_supported_compressed_file_format("1234567/test.tar"))
-        self.assertTrue(is_supported_compressed_file_format("1234567/test.tar.gz"))
-        self.assertFalse(is_supported_compressed_file_format("1234567/test.zarr"))
+        self.assertTrue(is_supported_preload_file_format("1234567/test.zip"))
+        self.assertTrue(is_supported_preload_file_format("1234567/test.tar"))
+        self.assertTrue(is_supported_preload_file_format("1234567/test.tar.gz"))
+        self.assertTrue(is_supported_preload_file_format("1234567/test.nc"))
+        self.assertFalse(is_supported_preload_file_format("1234567/test.zarr"))
