@@ -92,7 +92,12 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
             any(data_id_mod in ext_id for ext_id in self._cache_store.get_data_ids())
             and not force_preload
         ):
-            self.notify(PreloadState(data_id, message="Already preloaded"))
+            self.notify(
+                PreloadState(
+                    data_id,
+                    message="Already preloaded",
+                )
+            )
         else:
             self._download_data(data_id)
             if format_ext != "nc":
