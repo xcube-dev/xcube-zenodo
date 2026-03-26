@@ -31,7 +31,7 @@ from xcube.core.chunk import chunk_dataset
 from xcube.core.store import DataStoreError, PreloadedDataStore, new_data_store
 from xcube.core.store.preload import ExecutorPreloadHandle, PreloadState, PreloadStatus
 
-from ._utils import identify_compressed_file_format
+from ._utils import identify_preload_file_format
 from .constants import (
     LOG,
     MAP_FILE_EXTENSION_FORMAT,
@@ -85,7 +85,7 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
             self._cache_fs.rm(self._cache_root, recursive=True)
 
     def preload_data(self, data_id: str, **preload_params):
-        format_ext = identify_compressed_file_format(data_id)
+        format_ext = identify_preload_file_format(data_id)
         force_preload = preload_params.get("force_preload", False)
         data_id_mod = data_id.replace(f".{format_ext}", "")
         if (
@@ -100,7 +100,8 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
             )
         else:
             self._download_data(data_id)
-            self._decompress_data(data_id)
+            if format_ext != "nc":
+                self._decompress_data(data_id)
             self._prepare_data(data_id, **preload_params)
 
     def _download_data(self, data_id: str):
@@ -156,7 +157,7 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
 
             # compressed file is a tar or tar.gz
             elif file_path.endswith(".tar") or file_path.endswith(".tar.gz"):
-                format_ext = identify_compressed_file_format(file_path)
+                format_ext = identify_preload_file_format(file_path)
                 mode = "r" if format_ext == "tar" else "r:gz"
                 with tarfile.open(fileobj=file, mode=mode) as tar_ref:
                     dirname = data_id.replace(f".{format_ext}", "")
@@ -180,9 +181,12 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
                 message="Prepare data",
             )
         )
-        format_ext = identify_compressed_file_format(data_id)
-        dirname = data_id.replace(f".{format_ext}", "")
-        extract_dir = self._process_fs.sep.join([self._process_root, dirname])
+        format_ext = identify_preload_file_format(data_id)
+        if format_ext == "nc":
+            extract_dir = self._process_root
+        else:
+            dirname = data_id.replace(f".{format_ext}", "")
+            extract_dir = self._process_fs.sep.join([self._process_root, dirname])
         sub_files = recursive_listdir(self._process_fs, extract_dir)
         total_size = sum([sub_file["size"] for sub_file in sub_files])
         size_count = 0
@@ -215,7 +219,6 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
                     + (size_count / total_size) * PRELOAD_PROCESSING_FRACTION,
                 )
             )
-        self._process_fs.rm(extract_dir, recursive=True)
         self.notify(PreloadState(data_id, progress=1.0, message="Preload finished"))
 
     def _copy_file(self, source_data_id: str, len_files: int) -> None:
