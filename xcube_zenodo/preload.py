@@ -309,7 +309,6 @@ class ZenodoPreloadHandle(ExecutorPreloadHandle):
 
     def _clean_up(self) -> None:
         if self._process_fs.isdir(self._process_root):
-            print(self._process_root)
             self._process_fs.rm(self._process_root, recursive=True)
 
 
